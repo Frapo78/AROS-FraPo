@@ -61,6 +61,8 @@ jobs:
             docs/nexus/ABI_V1_COMPAT.md
             docs/nexus/BOOTSTRAP_MVP.md
             docs/nexus/TASKS.md
+            .github/ISSUE_TEMPLATE/nexus_engineering_task.md
+            .github/pull_request_template.md
           )
           for file in "${required[@]}"; do
             test -f "$file" || {
@@ -122,6 +124,13 @@ jobs:
           grep -q 'Evidence Red Team' docs/nexus/REVIEW_PROTOCOL.md
           grep -q 'H1 — mandatory human technical review' docs/nexus/VERIFICATION_MODEL.md
           grep -q 'No L1-L5 claim is accepted' AGENTS.md
+          test "$(wc -l < AGENTS.md)" -le 300
+          grep -q '## Acceptance criteria' .github/ISSUE_TEMPLATE/nexus_engineering_task.md
+          grep -q '## Negative / red-team criteria' .github/ISSUE_TEMPLATE/nexus_engineering_task.md
+          grep -q '## Review 3 test plan' .github/ISSUE_TEMPLATE/nexus_engineering_task.md
+          grep -q '## Review 3 — Evidence Red Team' .github/pull_request_template.md
+          grep -q 'NO TEST, EXPLAIN WHY' .github/pull_request_template.md
+          grep -q '## Human / hardware gate' .github/pull_request_template.md
           grep -q 'Francesco Poltero' docs/nexus/GOVERNANCE.md
           grep -q 'info@francescopoltero.com' docs/nexus/GOVERNANCE.md
           grep -q '2edd46536d08e3b54ecd1315f337a9b7de896f3a' docs/nexus/BASELINE.md
