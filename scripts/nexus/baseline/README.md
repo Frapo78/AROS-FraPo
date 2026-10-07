@@ -178,19 +178,28 @@ It then:
 9. records the exact artifact size and SHA-256.
 
 The build, generated toolchain and downloaded port sources are attempt-local in
-v0. This favors evidence isolation over speed.
+v0. The wrapper also sets `CCACHE_DISABLE=1`, because the upstream stage driver
+normally enables ccache and a host-global cache would undermine this isolation.
+
+This favors evidence isolation over speed.
 
 A successful execution is G1 evidence. It does not close #3 until the selected
 reference environment has actually produced and repeated the expected result.
 
 ## QEMU run
 
-The ISO path is always explicit:
+The ISO path is always explicit and must be the exact artifact produced by the
+baseline build harness:
 
 ```sh
 scripts/nexus/baseline/run-qemu-x86_64.sh \
-    /path/to/aros-pc-x86_64.iso
+    /path/to/attempt/artifacts/aros-pc-x86_64.iso
 ```
+
+The runner requires the sibling `build-manifest.txt`, verifies that the build
+completed successfully, checks the recorded artifact path and SHA-256, and
+copies the source/profile/toolchain provenance into the run manifest. Arbitrary
+unbound ISOs are rejected.
 
 Reference settings:
 
@@ -208,8 +217,8 @@ Reference settings:
 TCG is intentional: the reference run should not silently depend on host KVM
 features.
 
-The QEMU version is recorded because QEMU machine aliases and device models
-evolve.
+The QEMU executable path, SHA-256 and version are recorded because QEMU machine
+aliases, CPU models and device implementations evolve.
 
 For a non-graphical diagnostic run:
 
@@ -278,6 +287,7 @@ The harness deliberately rejects:
 - shared toolchain/build/port-source workspaces between attempts;
 - host-acceleration dependence in the reference VM;
 - network dependence in the reference VM;
+- QEMU runs that are not bound to a successful harness build artifact;
 - headless/manual Wanderer false positives;
 - "QEMU launched" == "AROS booted";
 - "compiled" == "baseline advanced".
