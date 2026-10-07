@@ -6,16 +6,20 @@ on:
       - nexus/main
     paths:
       - 'docs/nexus/**'
+      - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
       - '.github/workflows/nexus-project-sanity.yml'
   pull_request:
     branches:
       - nexus/main
     paths:
       - 'docs/nexus/**'
+      - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
       - '.github/workflows/nexus-project-sanity.yml'
 
 permissions:
