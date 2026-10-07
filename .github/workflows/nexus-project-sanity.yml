@@ -109,6 +109,15 @@ jobs:
 
           print("Nexus local Markdown links are valid.")
 
+      - name: Check Nexus shell syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' script; do
+            echo "Checking $script"
+            bash -n "$script"
+          done < <(find scripts/nexus -type f -name '*.sh' -print0)
+
       - name: Check Nexus process references
         shell: bash
         run: |
