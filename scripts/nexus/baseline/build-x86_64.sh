@@ -45,13 +45,14 @@ first_version_line()
     "$1" --version 2>&1 | sed -n '1p' | tr '\r\n' '  '
 }
 
-for cmd in git make awk bash python3 cc c++; do
+for cmd in git make awk bash python3 cc c++ sed tr; do
     need "$cmd"
 done
 
-script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null)" ||
     die "script must run from an AROS-FraPo Git worktree"
+repo_root="$(cd -- "$repo_root" && pwd -P)"
 
 target="${NEXUS_TARGET:-pc-x86_64}"
 profile="${NEXUS_PROFILE:-compat}"
@@ -67,14 +68,10 @@ case "$profile" in
 esac
 
 source_sha="$(git -C "$repo_root" rev-parse HEAD)"
-source_dirty=no
 if [ -n "$(git -C "$repo_root" status --porcelain --untracked-files=normal)" ]; then
-    source_dirty=yes
+    die "source tree is dirty; baseline evidence requires a clean Git worktree"
 fi
-
-if [ "$source_dirty" = yes ] && [ "${NEXUS_ALLOW_DIRTY:-0}" != 1 ]; then
-    die "source tree is dirty; commit/stash changes or set NEXUS_ALLOW_DIRTY=1"
-fi
+source_dirty=no
 
 source_gcc_default="$(tr -d '\r\n' < "$repo_root/config/gcc_def")"
 source_binutils_default="$(tr -d '\r\n' < "$repo_root/config/binutils_def")"
@@ -88,6 +85,14 @@ else
     work_root="${XDG_CACHE_HOME:-$HOME/.cache}/aros-nexus/baseline"
 fi
 
+mkdir -p "$work_root"
+work_root="$(cd -- "$work_root" && pwd -P)"
+case "$work_root/" in
+    "$repo_root/"*)
+        die "NEXUS_WORK_ROOT must be outside the Git worktree"
+        ;;
+esac
+
 host_os="$(uname -s)"
 host_arch="$(uname -m)"
 host_cc_version="$(first_version_line cc)"
@@ -99,21 +104,26 @@ stage_driver_blob="$(git -C "$repo_root" rev-parse HEAD:scripts/azure/aros-stage
 configure_blob="$(git -C "$repo_root" rev-parse HEAD:configure)"
 
 toolchain_input_key="$(
-    printf '%s\n'         "$host_os"         "$host_arch"         "$target"         "$gcc_version"         "$binutils_version"         "$crosstools_tree"         "$collect_tree"         "$stage_driver_blob"         "$configure_blob" |
+    printf '%s\n' \
+        "$source_sha" \
+        "$host_os" \
+        "$host_arch" \
+        "$target" \
+        "$gcc_version" \
+        "$binutils_version" \
+        "$crosstools_tree" \
+        "$collect_tree" \
+        "$stage_driver_blob" \
+        "$configure_blob" |
         sha256_text
 )"
 
-source_key="$source_sha"
-if [ "$source_dirty" = yes ]; then
-    source_key="$source_sha-dirty"
-fi
-
 attempt_id="$(date -u '+%Y%m%dT%H%M%SZ')-$$"
-run_root="$work_root/runs/$source_key/$profile/$attempt_id"
+run_root="$work_root/runs/$source_sha/$profile/$attempt_id"
 build_dir="$run_root/build"
 toolchain_dir="$run_root/toolchain"
+ports_dir="$run_root/portssources"
 artifact_dir="$run_root/artifacts"
-ports_dir="$work_root/portssources"
 
 if [ -n "${BUILDTHREADS:-}" ]; then
     jobs="$BUILDTHREADS"
@@ -131,9 +141,10 @@ case "$jobs" in
 esac
 
 [ ! -e "$run_root" ] || die "run path already exists: $run_root"
-mkdir -p "$build_dir" "$toolchain_dir" "$artifact_dir" "$ports_dir"
+mkdir -p "$build_dir" "$toolchain_dir" "$ports_dir" "$artifact_dir"
 
 manifest="$artifact_dir/build-manifest.txt"
+submodule_manifest="$artifact_dir/submodules.txt"
 iso_out="$artifact_dir/aros-pc-x86_64.iso"
 status=failed
 
@@ -161,9 +172,17 @@ trap finish EXIT
     printf 'PROFILE=%s\n' "$profile"
     printf 'BOOTLOADER=grub2\n'
     printf 'GCC_VERSION=%s\n' "$gcc_version"
-    printf 'GCC_VERSION_SOURCE=%s\n'         "$([ -n "${NEXUS_GCC_VERSION:-}" ] && printf override || printf config/gcc_def)"
+    if [ -n "${NEXUS_GCC_VERSION:-}" ]; then
+        printf 'GCC_VERSION_SOURCE=override\n'
+    else
+        printf 'GCC_VERSION_SOURCE=config/gcc_def\n'
+    fi
     printf 'BINUTILS_VERSION=%s\n' "$binutils_version"
-    printf 'BINUTILS_VERSION_SOURCE=%s\n'         "$([ -n "${NEXUS_BINUTILS_VERSION:-}" ] && printf override || printf config/binutils_def)"
+    if [ -n "${NEXUS_BINUTILS_VERSION:-}" ]; then
+        printf 'BINUTILS_VERSION_SOURCE=override\n'
+    else
+        printf 'BINUTILS_VERSION_SOURCE=config/binutils_def\n'
+    fi
     printf 'CROSSTOOLS_TREE=%s\n' "$crosstools_tree"
     printf 'COLLECT_AROS_TREE=%s\n' "$collect_tree"
     printf 'STAGE_DRIVER_BLOB=%s\n' "$stage_driver_blob"
@@ -177,11 +196,16 @@ trap finish EXIT
     printf 'GIT_VERSION=%s\n' "$(git --version | tr '\r\n' '  ')"
     printf 'MAKE_VERSION=%s\n' "$(make --version | sed -n '1p' | tr '\r\n' '  ')"
     printf 'BUILDTHREADS=%s\n' "$jobs"
+    printf 'CCACHE_DISABLE=1\n'
     printf 'RUN_ROOT=%s\n' "$run_root"
     printf 'BUILD_DIR=%s\n' "$build_dir"
     printf 'TOOLCHAIN_DIR=%s\n' "$toolchain_dir"
     printf 'PORTSSOURCES_DIR=%s\n' "$ports_dir"
+    printf 'SUBMODULE_MANIFEST=%s\n' "$submodule_manifest"
 } > "$manifest"
+
+git -C "$repo_root" submodule status --recursive > "$submodule_manifest"
+printf 'SUBMODULE_MANIFEST_SHA256=%s\n' "$(sha256_file "$submodule_manifest")" >> "$manifest"
 
 configure_args=(
     "--target=$target"
@@ -211,6 +235,10 @@ export AROSBUILDDIR="$build_dir"
 export AROSBUILDTOOLCHAINDIR="$toolchain_dir"
 export AROSPORTSSRCSDIR="$ports_dir"
 export BUILDTHREADS="$jobs"
+
+# The upstream stage driver enables ccache. Baseline evidence disables cache
+# reuse so prior host state cannot satisfy this build attempt.
+export CCACHE_DISABLE=1
 
 printf 'Building fresh AROS toolchain for baseline attempt %s...\n' "$attempt_id"
 "$repo_root/scripts/azure/aros-stage.sh" toolchain "${configure_args[@]}"
