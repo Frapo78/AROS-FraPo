@@ -6,6 +6,7 @@ on:
       - nexus/main
     paths:
       - 'docs/nexus/**'
+      - 'scripts/nexus/**'
       - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -16,6 +17,7 @@ on:
       - nexus/main
     paths:
       - 'docs/nexus/**'
+      - 'scripts/nexus/**'
       - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -57,6 +59,10 @@ jobs:
             docs/nexus/ABI_V1_COMPAT.md
             docs/nexus/BOOTSTRAP_MVP.md
             docs/nexus/TASKS.md
+            scripts/nexus/baseline/README.md
+            scripts/nexus/baseline/build-x86_64.sh
+            scripts/nexus/baseline/run-qemu-x86_64.sh
+            scripts/nexus/baseline/record-wanderer-result.sh
           )
           for file in "${required[@]}"; do
             test -f "$file" || {
