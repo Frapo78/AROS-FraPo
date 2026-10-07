@@ -6,6 +6,23 @@
 
 Nexus is the protected execution architecture proposed for AROS-FraPo. Its purpose is to let AROS preserve the classic Amiga/AROS execution model where that model is required for compatibility, while also providing modern isolation, SMP scalability, driver containment and hardware support.
 
+For the motivation and community-facing description, see [VISION.md](VISION.md).
+
+## Architectural philosophy
+
+Nexus starts from the assumption that AROS should not need to choose between its Amiga heritage and credible modern systems engineering.
+
+The architecture therefore treats both as first-class requirements:
+
+- **Amiga/AROS compatibility is not a temporary migration problem.** ABI v1 remains a supported execution contract.
+- **Protection is not optional decoration.** New native software and isolated services must be able to rely on hardware-enforced address-space boundaries.
+- **Exec concepts remain culturally important.** New protected primitives should evolve the message-driven AROS model rather than automatically importing Unix semantics.
+- **Modern hardware must be native, not bolted on.** SMP, DMA isolation, NVMe, UEFI, modern buses and current CPU architectures belong in the core design.
+- **The system must remain understandable.** Nexus should prefer small mechanisms, explicit boundaries and inspectable protocols over opaque complexity.
+
+This document describes an experimental direction. It does not claim to be an official upstream AROS architecture until and unless the AROS community chooses to adopt any part of it.
+
+
 ## 1. Non-negotiable goals
 
 Nexus must satisfy all of the following:
