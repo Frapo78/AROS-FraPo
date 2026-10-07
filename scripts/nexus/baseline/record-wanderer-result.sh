@@ -54,8 +54,8 @@ fi
     printf 'OBSERVER=%s\n' "${NEXUS_OBSERVER:-${USER:-unknown}}"
     printf 'NOTE=%s\n' "$(printf '%s' "$note" | tr '\r\n' '  ')"
     if [ -n "$evidence" ]; then
+        [ -f "$evidence" ] || die "evidence file not found: $evidence"
         evidence_abs="$(cd -- "$(dirname -- "$evidence")" && pwd)/$(basename -- "$evidence")"
-        [ -f "$evidence_abs" ] || die "evidence file not found: $evidence_abs"
         printf 'EVIDENCE=%s\n' "$evidence_abs"
         printf 'EVIDENCE_SHA256=%s\n' "$(sha256_file "$evidence_abs")"
     else
