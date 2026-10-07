@@ -12,7 +12,9 @@ Nexus is not an attempt to replace AROS with a Unix-like system. It is an attemp
 
 ## Start here
 
-If you are new to the project, read these in order:
+If you are implementing or reviewing Nexus work, read the root [AGENTS.md](../../AGENTS.md) first.
+
+If you are new to the architecture, read these in order:
 
 1. [Vision](VISION.md) — why Nexus exists, what it wants to preserve, and the long-term goal.
 2. [Architecture](ARCHITECTURE.md) — the convergent AROS/Nexus model and technical invariants.
@@ -33,10 +35,11 @@ If you are new to the project, read these in order:
 17. [AI and Automation Foundations](AI_FOUNDATIONS.md) — future-ready service/capability foundations without putting AI in the kernel.
 18. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
 19. [CI and validation](CI_STRATEGY.md) — staged build, QEMU and hardware gates.
-20. [Review Protocol](REVIEW_PROTOCOL.md) — mandatory three-pass review and red-team process.
-21. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
-22. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
-23. [Tasks](TASKS.md) — current phase status and issue links.
+20. [Verification Model](VERIFICATION_MODEL.md) — evidence classes, H0-H3 gates and agent-independence limits.
+21. [Review Protocol](REVIEW_PROTOCOL.md) — Construction, Integration and Evidence Red Team.
+22. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
+23. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
+24. [Tasks](TASKS.md) — current phase status and issue links.
 
 ## The idea in one paragraph
 
@@ -115,15 +118,17 @@ See [GOVERNANCE.md](GOVERNANCE.md).
 
 Nexus deliberately optimizes for correctness rather than speed.
 
-Every non-trivial code or architecture change requires at least three review passes:
+Every non-trivial code or architecture change requires three distinct passes:
 
-1. correctness and scope;
-2. regression/concurrency/upstream integration;
-3. adversarial red-team.
+1. Construction;
+2. Integration;
+3. Evidence Red Team.
 
-Physical-hardware validation is a hard stop when QEMU cannot establish the required property.
+Review 3 should try to falsify the change with executable evidence. If that is not possible, it must follow **NO TEST, EXPLAIN WHY**.
 
-See [REVIEW_PROTOCOL.md](REVIEW_PROTOCOL.md) and [CI_STRATEGY.md](CI_STRATEGY.md).
+Kernel/protection work is H1 and requires human technical review. Hardware-dependent claims are H2. Strong release-level L2-L5 security claims are H3.
+
+See [VERIFICATION_MODEL.md](VERIFICATION_MODEL.md), [REVIEW_PROTOCOL.md](REVIEW_PROTOCOL.md) and [CI_STRATEGY.md](CI_STRATEGY.md).
 
 ## Branches
 
