@@ -1,6 +1,6 @@
 # Nexus x86-64 Baseline Harness
 
-> Status: **v0 — repeatable harness only; G1/G2 are not yet claimed complete**
+> Status: **v0 — repeatable harness only; G1/G2 are not yet complete**
 >
 > Ownership: **N — Nexus-owned project tooling**
 >
@@ -10,44 +10,54 @@
 
 This directory is a thin wrapper around the **upstream AROS build system**.
 
-It does not replace `configure`, MetaMake, `scripts/azure/aros-stage.sh`, or
-the upstream boot-ISO rules. If AROS changes its supported build procedure,
-Nexus should adapt a small wrapper rather than maintain a second build system.
+It does not replace:
 
-## Important terminology
+- `configure`;
+- MetaMake;
+- `scripts/azure/aros-stage.sh`;
+- upstream boot-ISO rules.
 
-"Repeatable" means that the harness records explicit source, toolchain and VM
-inputs. It does **not** yet claim byte-identical ISO reproduction.
+Nexus should adapt a small wrapper when upstream changes rather than maintain a
+second build system.
 
-AROS outputs may contain timestamps and may consume external distfiles. Artifact
-SHA-256 values identify exact artifacts; they are not an assertion that separate
-rebuilds must have equal hashes.
+## Terminology
 
-## Reference-toolchain policy
+"Repeatable" means the harness records explicit source, toolchain and VM inputs.
 
-For baseline v0, every build attempt creates a **fresh AROS cross-toolchain** in
-that attempt's private run directory.
+It does **not** claim byte-identical ISO reproduction. AROS output may contain
+timestamps and may consume external network content. Artifact SHA-256 values
+identify exact artifacts; they do not assert that two rebuilds must match.
 
-This is deliberately slower than caching, but it avoids making the first Nexus
-baseline depend on cache validity, relocation or stale host artifacts.
+## Reference build policy
 
-Toolchain caching may be added later only after the uncached reference path is
-proven and the cache can demonstrate equivalent results.
+The v0 reference path is deliberately conservative:
 
-## What v0 records
+- clean Git worktree only;
+- one private run directory per attempt;
+- fresh AROS cross-toolchain per attempt;
+- private port-source directory per attempt;
+- `CCACHE_DISABLE=1`;
+- workspace must be outside the Git worktree.
 
-A completed build records:
+This is slower than caching but removes stale-cache, shared-workspace and
+concurrent-build ambiguity from the first baseline.
 
-- source commit and dirty state;
+Caching can be added later only after the uncached path is proven.
+
+## What a completed build records
+
+- source commit;
 - target/profile;
-- GCC/binutils version source;
+- GCC/binutils version and whether it came from AROS defaults or an override;
 - host OS/architecture and host compiler versions;
-- relevant upstream build/toolchain source identities;
-- cross-compiler/linker binary hashes;
+- upstream build/toolchain source identities;
+- submodule-state manifest hash;
+- generated cross-compiler/linker hashes and versions;
+- build configuration arguments;
 - ISO size and SHA-256.
 
-A QEMU run separately records its binary/version and fixed VM configuration.
-Wanderer success is a separate manual observation.
+The `TOOLCHAIN_INPUT_KEY` is an evidence/comparison identifier. It is not used
+as a cache key in v0.
 
 ## Profiles
 
@@ -68,7 +78,7 @@ The diagnostic profile is not equivalent to `compat` for regression claims.
 
 ## Toolchain versions
 
-By default, versions come from the checked-out AROS source:
+Defaults come from the checked-out AROS source:
 
 - `config/gcc_def`;
 - `config/binutils_def`.
@@ -82,39 +92,18 @@ NEXUS_BINUTILS_VERSION=...
 
 Overrides are recorded and must not silently become the tested project baseline.
 
-The initial source defaults are chosen because they are an explicit property of
-the checked-out AROS source. If the real G1 run shows that the current x86-64
-tree requires a different community-tested toolchain, that result must be
-documented rather than guessed in advance.
-
-## Dirty-tree policy
-
-Dirty source is rejected by default.
-
-```sh
-NEXUS_ALLOW_DIRTY=1 scripts/nexus/baseline/build-x86_64.sh
-```
-
-is allowed only for experiments. Such output is recorded as dirty and must not
-advance the tested baseline.
-
 ## Host requirements
 
 The current upstream Azure host-preparation template remains the source of
 truth for AROS build dependencies.
 
-The Nexus harness additionally checks for:
+The harness additionally checks for the local commands it directly uses,
+including Bash, Git, Make, Python 3, host C/C++ compilers and SHA-256 support.
+Runtime testing requires `qemu-system-x86_64` or an explicitly supplied QEMU
+binary.
 
-- Bash;
-- Git;
-- Make;
-- Python 3;
-- host C/C++ compilers;
-- `sha256sum` or `shasum`;
-- `qemu-system-x86_64` for runtime testing.
-
-Do not duplicate the complete upstream dependency installer here unless a
-future pinned CI image/container requires it.
+Do not duplicate the full upstream dependency installer here unless a future
+pinned CI image/container requires it.
 
 ## Build
 
@@ -137,7 +126,8 @@ $HOME/.cache/aros-nexus/baseline
 Override:
 
 ```sh
-NEXUS_WORK_ROOT=/path/to/work scripts/nexus/baseline/build-x86_64.sh
+NEXUS_WORK_ROOT=/path/outside/source \
+scripts/nexus/baseline/build-x86_64.sh
 ```
 
 Diagnostic build:
@@ -146,38 +136,44 @@ Diagnostic build:
 NEXUS_PROFILE=diagnostic scripts/nexus/baseline/build-x86_64.sh
 ```
 
-Every invocation creates an immutable run directory containing its private
-build directory, toolchain and artifacts.
-
-The build script:
-
-1. validates target/profile and clean-source policy;
-2. records the upstream build/toolchain source identities;
-3. builds a fresh upstream AROS cross-toolchain;
-4. records compiler/linker hashes;
-5. calls upstream `aros-stage.sh core`;
-6. invokes upstream `bootiso`;
-7. requires a non-empty `distfiles/aros-pc-x86_64.iso`;
-8. records the exact artifact hash.
-
-The external ports-source pool remains shared to avoid redownloading large
-distfiles. This makes v0 **non-hermetic** and is recorded as a known limitation.
-
 A successful execution is **G1 evidence**, not automatic completion of G1.
 
-## QEMU
+## QEMU provenance chain
 
-The ISO path is explicit:
+The QEMU runner accepts only the exact ISO produced by the harness:
 
 ```sh
-scripts/nexus/baseline/run-qemu-x86_64.sh /path/to/aros-pc-x86_64.iso
+scripts/nexus/baseline/run-qemu-x86_64.sh \
+    /path/to/run/artifacts/aros-pc-x86_64.iso
 ```
 
-Reference configuration:
+The ISO must have a sibling `build-manifest.txt`.
 
-- `pc` machine;
-- TCG, single thread;
-- `qemu64`;
+Before QEMU starts, the runner verifies:
+
+- build manifest format;
+- exactly one required provenance value per key;
+- `FINAL_STATUS=success`;
+- build exit code 0;
+- recorded artifact path equals the supplied ISO path;
+- ISO SHA-256 matches the build manifest;
+- source/profile/toolchain identity is present.
+
+The run manifest then records:
+
+- source/profile/toolchain identity;
+- build-manifest SHA-256;
+- ISO SHA-256;
+- QEMU path, SHA-256 and version;
+- VM configuration.
+
+This creates an explicit **G1 artifact → G2 run** evidence chain.
+
+## Reference QEMU configuration
+
+- machine: `pc`;
+- accelerator: TCG, single thread;
+- CPU model: `qemu64`;
 - one vCPU;
 - 1024 MiB RAM;
 - no network;
@@ -186,22 +182,24 @@ Reference configuration:
 - UTC RTC;
 - no automatic reboot.
 
-TCG avoids silently depending on host KVM features. QEMU version is recorded
-because machine aliases/device models evolve.
+TCG avoids silently depending on host KVM features.
+
+QEMU binary hash and version are recorded because machine aliases, CPU models
+and device behavior evolve.
 
 Headless diagnostic example:
 
 ```sh
 NEXUS_QEMU_MODE=headless \
 NEXUS_QEMU_TIMEOUT_SECONDS=120 \
-scripts/nexus/baseline/run-qemu-x86_64.sh /path/to/iso
+scripts/nexus/baseline/run-qemu-x86_64.sh /path/to/artifact.iso
 ```
 
 Timeout/failure remains unverified and returns non-zero.
 
 ## Wanderer verification
 
-The QEMU launcher never records boot success.
+The QEMU runner never records boot success.
 
 After an **interactive**, successfully exited run in which Wanderer was visibly
 usable:
@@ -213,65 +211,86 @@ scripts/nexus/baseline/record-wanderer-result.sh \
 
 Optional fourth argument: screenshot/evidence file.
 
-A pass is rejected if:
+A pass is rejected when:
 
-- the QEMU run is incomplete;
+- the run manifest format/required keys are invalid;
+- required manifest keys are duplicated;
+- QEMU did not finish with the expected successful final state;
 - QEMU exited non-zero;
-- the run was headless.
+- the run was headless;
+- a verification already exists.
 
-The record contains hashes tying it to the run manifest and ISO.
+The verification is bound to the run-manifest and ISO hashes.
 
-This manual gate is interim. A deterministic guest-side success signal is
-preferred before unattended CI claims Wanderer success.
+Manual observation is interim. A deterministic guest-side marker is preferred
+before unattended CI can claim Wanderer success.
 
 ## Fast self-test
-
-The harness has a no-build/no-real-QEMU self-test:
 
 ```sh
 scripts/nexus/baseline/selftest.sh
 ```
 
-It checks:
+This test does **not** compile or boot AROS. It uses synthetic evidence and a
+fake QEMU executable to exercise the harness contract.
+
+It checks at least:
 
 - invalid target/profile rejection;
+- work-root-inside-source rejection;
+- ISO-without-build-manifest rejection;
+- G1 provenance propagation into a QEMU run;
+- QEMU binary identity recording;
 - headless pass rejection;
 - failed-QEMU pass rejection;
-- evidence overwrite rejection;
-- run-directory overwrite rejection;
-- positive interactive evidence recording.
+- verification overwrite rejection;
+- duplicate manifest-key rejection;
+- inconsistent final-state rejection;
+- tampered ISO rejection.
 
-G0 runs both `bash -n` and this self-test.
+`Nexus project sanity` runs both `bash -n` and this self-test.
 
 ## Comparison rule
 
 Baseline and Nexus runs should use the same:
 
-- toolchain input/version policy;
+- tested baseline relationship;
+- toolchain policy;
 - profile;
-- QEMU version;
+- QEMU binary/version;
 - VM settings.
 
 Record exact artifact hashes but do not require equal ISO hashes between
-separate builds unless bit reproducibility has independently been proven.
+separate builds unless bit reproducibility has independently been demonstrated.
 
 ## Deliberate non-goals of v0
 
 - no cached reference toolchain;
+- no shared build/toolchain/port-source workspace between attempts;
+- no dirty-source baseline;
 - no implicit "latest ISO";
-- no baseline promotion from dirty source;
-- no silent toolchain override;
+- no arbitrary unbound ISO in the QEMU baseline path;
 - no KVM-dependent reference result;
-- no network-dependent boot result;
+- no network-dependent **VM boot** result;
 - no "QEMU launched == AROS booted";
 - no "compiled == baseline advanced";
-- no claim that m68k/ARM/RISC-V are covered by this x86-64 harness.
+- no claim that other CPU targets are covered.
 
-## Current limitation
+The AROS build itself may still download external source/distfiles. Therefore v0
+is not yet a hermetic build environment.
+
+## Current limitations
 
 This is tooling, not runtime evidence.
 
-G1/G2 remain open until the harness is run on the selected reference host,
-the outputs are reviewed, and the result is repeated.
+G1/G2 remain open until the harness is executed on the selected reference host,
+its outputs are reviewed, and the result is repeated.
+
+Additional residual limitations include:
+
+- host package versions are not pinned by Nexus;
+- build-time external downloads are not hermetically mirrored;
+- the `pc` QEMU alias is version-dependent, although QEMU identity is recorded;
+- Wanderer success is still a manual observation.
 
 A script committed to Git is not proof that AROS boots.
