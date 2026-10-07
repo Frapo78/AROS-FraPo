@@ -1,3 +1,24 @@
+# AROS-FraPo / Nexus experimental fork
+
+> This fork is exploring **Nexus**, an experimental architecture for evolving AROS while preserving its Amiga identity.
+
+Nexus is motivated by a deep passion for Amiga and by the belief that the ideas behind Exec, message ports, libraries/devices/resources, Intuition and the lightweight Amiga programming model still deserve a future on modern hardware.
+
+The project asks whether AROS can preserve that character while gaining strong memory isolation, SMP scalability, protected drivers, modern DMA/IOMMU handling and a coherent path across x86-64, ARM64 and RISC-V.
+
+This is **not an official AROS roadmap** and it is not an attempt to turn AROS into a Unix-like operating system. It is an experimental fork intended to test a deep architectural direction in working code while remaining respectful of and synchronisable with upstream AROS.
+
+**Read first:**
+- [Nexus Vision](docs/nexus/VISION.md)
+- [Nexus overview](docs/nexus/README.md)
+- [Architecture](docs/nexus/ARCHITECTURE.md)
+- [Roadmap](docs/nexus/ROADMAP.md)
+- [Community and participation](docs/nexus/COMMUNITY.md)
+
+Development happens primarily on `nexus/main` and `nexus/bootstrap-x86_64`. The fork's `master` branch is intended to stay close to upstream AROS.
+
+---
+
 [![AROS Logo](http://aros.org/images/toplogo.png?v=1.0)](http://developers.aros.org)
 # AROS Git Repository [![Codacy Badge](https://app.codacy.com/project/badge/Grade/8dd5a86f87064c14ba75f291c045e788)](https://app.codacy.com/gh/aros-development-team/AROS/dashboard)
 
