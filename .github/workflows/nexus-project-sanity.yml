@@ -6,6 +6,7 @@ on:
       - nexus/main
     paths:
       - 'docs/nexus/**'
+      - 'AGENTS.md'
       - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -16,6 +17,7 @@ on:
       - nexus/main
     paths:
       - 'docs/nexus/**'
+      - 'AGENTS.md'
       - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -37,6 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           required=(
+            AGENTS.md
             docs/nexus/README.md
             docs/nexus/VISION.md
             docs/nexus/ARCHITECTURE.md
@@ -52,6 +55,7 @@ jobs:
             docs/nexus/ADDRESS_SPACE_MODEL.md
             docs/nexus/BASELINE.md
             docs/nexus/CI_STRATEGY.md
+            docs/nexus/VERIFICATION_MODEL.md
             docs/nexus/REVIEW_PROTOCOL.md
             docs/nexus/GOVERNANCE.md
             docs/nexus/ABI_V1_COMPAT.md
@@ -113,7 +117,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'three distinct review passes' docs/nexus/REVIEW_PROTOCOL.md
+          grep -q 'three distinct review' docs/nexus/REVIEW_PROTOCOL.md
+          grep -q 'NO TEST, EXPLAIN WHY' AGENTS.md
+          grep -q 'Evidence Red Team' docs/nexus/REVIEW_PROTOCOL.md
+          grep -q 'H1 — mandatory human technical review' docs/nexus/VERIFICATION_MODEL.md
+          grep -q 'No L1-L5 claim is accepted' AGENTS.md
           grep -q 'Francesco Poltero' docs/nexus/GOVERNANCE.md
           grep -q 'info@francescopoltero.com' docs/nexus/GOVERNANCE.md
           grep -q '2edd46536d08e3b54ecd1315f337a9b7de896f3a' docs/nexus/BASELINE.md
