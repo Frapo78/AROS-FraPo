@@ -16,13 +16,18 @@ If you are new to the project, read these in order:
 
 1. [Vision](VISION.md) — why Nexus exists, what it wants to preserve, and the long-term goal.
 2. [Architecture](ARCHITECTURE.md) — the two-domain model and the technical invariants.
-3. [Roadmap](ROADMAP.md) — how the work is divided into demonstrable phases.
-4. [x86-64 Boot Map](X86_64_BOOT_MAP.md) — where the current AROS boot path gives us practical insertion points.
-5. [Bootstrap MVP](BOOTSTRAP_MVP.md) — the first implementation proof.
-6. [ABI v1 Compatibility Contract](ABI_V1_COMPAT.md) — what Nexus must not casually break.
-7. [ADR-0001](adr/0001-two-domain-architecture.md) — why the two-domain decision exists.
-8. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
-9. [Tasks](TASKS.md) — current phase status and issue links.
+3. [Trust and Fault Model](TRUST_MODEL.md) — what Nexus protects and the explicit isolation levels.
+4. [Legacy Privilege Model](LEGACY_PRIVILEGE_MODEL.md) — how Supervisor, Disable/Enable and machine privilege must change at the Cell boundary.
+5. [Nexus / Exec Split](NEXUS_EXEC_SPLIT.md) — why current kernel.resource is an extraction seam rather than the final Nexus API.
+6. [Address-Space Model](ADDRESS_SPACE_MODEL.md) — the first implementation primitive, including NX/W^X, CR3, faults and SMP TLB rules.
+7. [Roadmap](ROADMAP.md) — how the work is divided into demonstrable phases.
+8. [Baseline](BASELINE.md) — the exact upstream reference state and synchronization policy.
+9. [x86-64 Boot Map](X86_64_BOOT_MAP.md) — where the current AROS boot path gives us practical insertion points.
+10. [Bootstrap MVP](BOOTSTRAP_MVP.md) — the first implementation proof.
+11. [ABI v1 Compatibility Contract](ABI_V1_COMPAT.md) — what Nexus must not casually break.
+12. [ADR-0001](adr/0001-two-domain-architecture.md) — why the two-domain decision exists.
+13. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
+14. [Tasks](TASKS.md) — current phase status and issue links.
 
 ## The idea in one paragraph
 
@@ -80,9 +85,12 @@ Nexus is not yet an implemented execution model.
 
 The current work is intentionally conservative:
 
+- keep an exact upstream baseline;
 - map the real AROS boot path;
 - establish a reproducible x86-64/QEMU baseline;
-- identify privileged operations;
+- classify privilege and trust boundaries;
+- separate current kernel.resource mechanisms from Exec-specific policy;
+- audit NX/W^X, page-table ownership and SMP TLB behaviour;
 - protect ABI v1 behaviour with tests;
 - introduce architectural seams before changing semantics.
 
