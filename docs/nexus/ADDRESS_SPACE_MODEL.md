@@ -238,7 +238,7 @@ Such mappings must be:
 - diagnosable;
 - excluded from claims of strict W^X for that Cell.
 
-ABI v2 software should not receive WX by default.
+Protected AROS software should not receive WX by default.
 
 ## 11. Bootstrap mappings
 
