@@ -75,8 +75,6 @@ binutils_version="${NEXUS_BINUTILS_VERSION:-$source_binutils_default}"
 work_root="${NEXUS_WORK_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/aros-nexus/baseline}"
 build_dir="$work_root/build-$target-$profile"
 ports_dir="$work_root/portssources"
-artifact_dir="$work_root/artifacts/$source_sha/$profile"
-
 crosstools_tree="$(git -C "$repo_root" rev-parse HEAD:tools/crosstools)"
 collect_tree="$(git -C "$repo_root" rev-parse HEAD:tools/collect-aros)"
 toolchain_key="$(
@@ -84,6 +82,12 @@ toolchain_key="$(
 )"
 toolchain_dir="$work_root/toolchains/$toolchain_key"
 toolchain_marker="$toolchain_dir/.nexus-toolchain-complete"
+
+source_key="$source_sha"
+if [ "$source_dirty" = yes ]; then
+    source_key="$source_sha-dirty-$(date -u '+%Y%m%dT%H%M%SZ')"
+fi
+artifact_dir="$work_root/artifacts/$source_key/$profile/$toolchain_key"
 
 if [ -n "${BUILDTHREADS:-}" ]; then
     jobs="$BUILDTHREADS"
@@ -110,8 +114,9 @@ status=failed
 finish()
 {
     rc=$?
+    trap - EXIT
     {
-        printf 'STATUS=%s\n' "$status"
+        printf 'FINAL_STATUS=%s\n' "$status"
         printf 'EXIT_CODE=%s\n' "$rc"
         printf 'FINISHED_UTC=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     } >> "$manifest"
