@@ -81,44 +81,32 @@ source:
 - `config/gcc_def`;
 - `config/binutils_def`.
 
-An explicit experiment may override them:
+Explicit experiments may override them with:
 
 ```sh
 NEXUS_GCC_VERSION=...
 NEXUS_BINUTILS_VERSION=...
 ```
 
-Overrides are recorded and must not silently become the project baseline.
+Overrides are recorded in the manifest and must not silently become the tested
+project baseline.
 
-The toolchain cache key includes:
+**v0 deliberately does not cache the generated AROS toolchain.** Every attempt
+gets its own toolchain directory and invokes the upstream toolchain stage from
+scratch. This is slower but removes stale-cache and concurrent-cache ambiguity
+from the first baseline.
 
-- host OS/architecture;
-- AROS target;
-- GCC/binutils versions;
-- `tools/crosstools` Git tree;
-- `tools/collect-aros` Git tree.
+The manifest records a `TOOLCHAIN_INPUT_KEY` derived from the source commit,
+target, toolchain versions and relevant upstream build/toolchain source
+identities. In v0 it is an evidence/comparison key, not a cache lookup key.
 
-A cache entry is reused only when its expected compiler/linker binaries exist
-and still match the hashes stored in the Nexus marker.
+## Clean-source policy
 
-This mirrors the upstream idea of caching toolchains while making the reused
-binary identity explicit.
+Baseline evidence requires a clean Git worktree.
 
-## Dirty-tree policy
-
-The build refuses a dirty worktree by default.
-
-For an intentional local experiment:
-
-```sh
-NEXUS_ALLOW_DIRTY=1
-```
-
-may be used, but:
-
-- `SOURCE_DIRTY=yes` is recorded;
-- the artifacts are placed under a `-dirty` source key;
-- such evidence must not advance the tested baseline.
+There is no dirty-tree override in v0. A local dirty experiment may use the
+normal AROS build flow, but it is intentionally outside the baseline evidence
+path.
 
 ## Host requirements
 
@@ -180,18 +168,17 @@ The script creates a new immutable attempt directory for every invocation.
 It then:
 
 1. rejects unsupported targets/profiles;
-2. rejects dirty source by default;
-3. computes/verifies a host-aware toolchain cache key;
-4. calls upstream `scripts/azure/aros-stage.sh toolchain` when needed;
-5. calls upstream `scripts/azure/aros-stage.sh core`;
-6. invokes the configured upstream `bootiso` target;
-7. requires a non-empty `distfiles/aros-pc-x86_64.iso`;
-8. records the exact artifact hash;
-9. records toolchain binary hashes;
-10. snapshots the external-source pool into a checksum manifest.
+2. requires a clean Git worktree;
+3. creates an attempt-local workspace outside the source tree;
+4. records source/submodule/toolchain-input provenance;
+5. builds a fresh toolchain through upstream `scripts/azure/aros-stage.sh toolchain`;
+6. builds the core through upstream `scripts/azure/aros-stage.sh core`;
+7. invokes the configured upstream `bootiso` target;
+8. requires a non-empty `distfiles/aros-pc-x86_64.iso`;
+9. records the exact artifact size and SHA-256.
 
-The ports-source manifest is provenance for the pool state after the build. It
-is **not** a claim that every file in that pool was consumed by that build.
+The build, generated toolchain and downloaded port sources are attempt-local in
+v0. This favors evidence isolation over speed.
 
 A successful execution is G1 evidence. It does not close #3 until the selected
 reference environment has actually produced and repeated the expected result.
@@ -287,9 +274,8 @@ The harness deliberately rejects:
 
 - implicit "latest ISO" selection;
 - evidence overwrite by default;
-- dirty baseline promotion;
-- silent toolchain override;
-- unchecked toolchain-cache corruption;
+- dirty source in the baseline path;
+- shared toolchain/build/port-source workspaces between attempts;
 - host-acceleration dependence in the reference VM;
 - network dependence in the reference VM;
 - headless/manual Wanderer false positives;
