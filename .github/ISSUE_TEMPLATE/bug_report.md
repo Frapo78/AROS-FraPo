@@ -1,47 +1,73 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: Nexus bug report
+about: Report a reproducible problem in AROS-FraPo / Nexus
 title: ''
 labels: 'bug'
 assignees: ''
-
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## What happened?
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+Describe the problem clearly and concisely.
 
-**Expected behaviour**
-A clear and concise description of what you expected to happen.
+## What did you expect?
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+Describe the expected behaviour.
 
-**Architecture**
- - Amiga (including UAE, Vampire cards)
- - pc (native)
- - linux (hosted)
- - Raspberry Pi
- - mingw
- - darwin
- - other:
- 
-**CPU**
- - i386
- - x86_64
- - m68k
- - arm
- - ppc
- - other:
+## Reproduction steps
 
-**Version**
-Provide the Git ID from AboutAROS (call menu Wanderer>AROS>About)
+1.
+2.
+3.
 
-**Additional context**
-Add any other context about the problem here.
+## Nexus / repository state
+
+- Branch:
+- Commit SHA:
+- Upstream baseline SHA:
+- Related Nexus issue/PR, if any:
+
+## Environment
+
+- Target (for example pc-x86_64):
+- Host OS:
+- QEMU version / physical hardware:
+- CPU count:
+- RAM:
+- Firmware/boot method:
+- Toolchain/compiler:
+
+## Isolation level involved
+
+If relevant, state the highest claimed/proven level:
+
+- L0 Compatibility containment
+- L1 CPU memory isolation
+- L2 Privilege isolation
+- L3 Hardware isolation
+- L4 DMA isolation
+- L5 Service fault isolation
+- Not applicable / unknown
+
+## Logs
+
+Attach or paste the smallest useful:
+
+- serial/debug log;
+- panic/fault output;
+- build error;
+- test output.
+
+For low-level faults include CR2/fault address, instruction pointer and error code when available.
+
+## Regression?
+
+- [ ] Reproduces on the recorded upstream baseline
+- [ ] Nexus-only regression
+- [ ] Unknown
+
+If you tested both upstream-compatible `master` and `nexus/main`, describe the difference.
+
+## Additional context
+
+Add anything else that helps reproduce or classify the issue.
