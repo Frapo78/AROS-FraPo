@@ -8,6 +8,13 @@ Nexus is the protected execution architecture proposed for AROS-FraPo. Its purpo
 
 For the motivation and community-facing description, see [VISION.md](VISION.md).
 
+Security and implementation details are split into focused documents:
+
+- [TRUST_MODEL.md](TRUST_MODEL.md)
+- [LEGACY_PRIVILEGE_MODEL.md](LEGACY_PRIVILEGE_MODEL.md)
+- [NEXUS_EXEC_SPLIT.md](NEXUS_EXEC_SPLIT.md)
+- [ADDRESS_SPACE_MODEL.md](ADDRESS_SPACE_MODEL.md)
+
 ## Architectural philosophy
 
 Nexus starts from the assumption that AROS should not need to choose between its Amiga heritage and credible modern systems engineering.
@@ -99,6 +106,28 @@ It must not know about:
 - Wanderer
 
 Those belong above the protection boundary.
+
+### Current kernel.resource is an extraction seam, not Nexus itself
+
+The existing `kernel.resource` is strategically valuable because it already concentrates MMU, IRQ, CPU-context and scheduler-adjacent mechanisms.
+
+It is not yet the final Nexus boundary.
+
+Current native implementations still interact with `SysBase`, `struct Task`, Exec scheduler state and ABI v1 privilege semantics. Nexus must extract machine ownership from that code while leaving Exec-specific policy in a Legacy compatibility layer.
+
+The target is therefore:
+
+```
+Exec / ABI v1 policy
+        |
+Legacy kernel compatibility
+        |
+-------- protection boundary --------
+        |
+Nexus machine primitives
+```
+
+See [NEXUS_EXEC_SPLIT.md](NEXUS_EXEC_SPLIT.md).
 
 ## 4. Legacy Cell contract
 
@@ -202,6 +231,8 @@ AROS service/library
 
 This lets AROS retain HIDD as the compatibility and object-model boundary while moving actual hardware access out of the Legacy Cell.
 
+HIDD interfaces are **not assumed to be wire-safe IPC protocols**. Existing interfaces may contain raw pointers, Hooks, Interrupt structures, TagItems or OOP objects. A HIDD proxy therefore translates a legacy method into a canonical Nexus service protocol; it does not blindly serialize arbitrary HIDD call frames.
+
 ## 9. DMA and IOMMU
 
 CPU memory protection is incomplete if a device can DMA anywhere in physical RAM.
@@ -214,6 +245,23 @@ On IOMMU-capable platforms, Nexus must:
 - prevent drivers from programming unrestricted DMA targets.
 
 On hardware without an IOMMU, affected drivers are explicitly classified as trusted and the reduced isolation level must be visible to diagnostics.
+
+### Isolation levels
+
+Nexus does not use the word "isolated" as a binary claim.
+
+Milestones report the highest property actually proven:
+
+- **L0** — compatibility containment;
+- **L1** — CPU memory isolation;
+- **L2** — privilege isolation;
+- **L3** — hardware/MMIO/IRQ isolation;
+- **L4** — DMA isolation;
+- **L5** — service fault isolation.
+
+A Legacy Cell that has separate page tables but still controls unrestricted bus-master DMA is not L4 and must not be described as fully isolated.
+
+See [TRUST_MODEL.md](TRUST_MODEL.md).
 
 ## 10. ABI strategy
 
@@ -279,13 +327,29 @@ The project should continually reduce the amount of code whose failure can reach
 
 The first architecture target is x86-64 under QEMU.
 
-The first proof is not a new desktop or a new API.
+The first proof is deliberately smaller than a Legacy Cell.
 
-The proof is:
+### Proof 1 — explicit address-space ownership
 
-> Boot the current x86-64 AROS world as a non-privileged Legacy Cell above Nexus-owned page tables, CPU state and interrupt control, while preserving observable ABI v1 behaviour.
+Current AROS boots unchanged while its runtime MMU root is represented through an internal `NexusAddressSpace` abstraction.
 
-Only after that boundary works should hardware services and ABI v2 be expanded.
+This proves an architectural seam, not isolation.
+
+### Proof 2 — protected payload
+
+A second address space runs a tiny controlled payload. A deliberate invalid access is classified as a domain fault and does not halt Nexus.
+
+This is the first L1 proof.
+
+### Proof 3 — explicit sharing
+
+Two protected contexts share only an explicitly granted MemoryObject while private pages remain inaccessible.
+
+### Proof 4 — Legacy Cell
+
+Only after those primitives work independently do we move ABI v1 Exec/DOS into a Legacy Cell.
+
+Booting Wanderer inside that Cell is a major compatibility milestone, but its security claim is limited to the isolation levels actually enforced at that point. Hardware and DMA isolation are separate milestones.
 
 ## 15. Architectural prohibition list
 
