@@ -151,7 +151,7 @@ The script:
 5. calls upstream `scripts/azure/aros-stage.sh core`;
 6. calls the configured upstream `bootiso` target;
 7. verifies that `distfiles/aros-pc-x86_64.iso` exists and is non-empty;
-8. copies it to a commit/profile-specific artifact directory;
+8. copies it to an immutable commit/profile/toolchain/attempt artifact directory;
 9. records SHA-256 and build metadata.
 
 A successful build is **G1 evidence**, but issue #3 is not complete until the
