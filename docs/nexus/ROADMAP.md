@@ -1,372 +1,374 @@
 # Nexus Roadmap
 
-> This roadmap is ordered by architectural dependency, not by visibility to end users.
+> Status: living roadmap
+>
+> Current architectural direction: [ADR-0002](adr/0002-convergent-aros-nexus-architecture.md)
 
-The roadmap is deliberately incremental. Nexus should never depend on a distant "big rewrite" moment before it becomes useful or testable.
+This roadmap is ordered by architectural dependency, not by feature visibility.
 
-Each major phase should produce something the AROS community can inspect, run, measure and criticise. A phase is not considered successful merely because the code compiles: it should demonstrate a concrete architectural property while preserving the agreed compatibility baseline.
+It is intentionally revisable.
+
+A roadmap change is not a failure if new upstream work, tests, hardware evidence or red-team review shows that another path is better.
+
+The project optimizes for:
+
+1. correctness;
+2. compatibility;
+3. maintainability;
+4. upstream convergence;
+5. security/containment;
+6. performance;
+7. implementation speed.
 
 ## Roadmap principles
 
-- **Keep AROS alive while changing it.** Every phase should leave a usable reference configuration.
-- **Prefer proofs over promises.** A protected address space, contained fault or restartable driver is more valuable than a large speculative framework.
-- **Protect compatibility with tests.** ABI v1 behaviour must be measured rather than assumed.
-- **Keep upstream in sight.** Localise Nexus changes and avoid unnecessary divergence.
-- **Make milestones discussable.** Important design changes should be documented in ADRs before they spread through the tree.
-- **Do not confuse modernisation with expansion of scope.** The roadmap should solve architectural blockers first, then broaden hardware and user-facing capabilities.
+- **Keep AROS alive while changing it.**
+- **Prefer extraction over replacement.**
+- **Prefer upstream mechanisms over fork-specific duplicates.**
+- **Prove seams before changing semantics.**
+- **Use generated adapters where practical.**
+- **Introduce protection selectively.**
+- **Never confuse a working demo with a proven isolation level.**
+- **Pause when real hardware is required.**
+- **Allow architecture changes through reviewed ADRs.**
 
-## Phase 0 — Baseline and guardrails
+## Phase 0 — Convergence baseline and guardrails
 
-Goal: make regressions and protection assumptions measurable before changing low-level behaviour.
+Goal: understand current AROS deeply enough to extract modern mechanisms without freezing or duplicating the system.
 
 Deliverables:
 
-- freeze the ABI v1 compatibility contract;
-- record the exact upstream implementation baseline;
-- identify the x86-64 boot path from firmware/loader to Exec and Wanderer;
-- inventory privileged operations currently performed by Exec, kernel.resource and drivers;
-- define the trust/fault model and isolation levels;
-- define how legacy privilege is virtualised;
-- classify the current kernel.resource / Exec coupling;
-- audit x86-64 NX/W^X, page-table ownership, CR3 and SMP TLB semantics;
-- establish reproducible QEMU boot images;
-- capture boot logs and basic performance baselines;
-- identify existing SMP, memory, DOS and HIDD tests relevant to Nexus;
-- establish the minimum Nexus CI/QEMU implementation gate.
+- exact upstream baseline;
+- continuous upstream-head review;
+- x86-64 boot map;
+- privilege inventory;
+- kernel.resource / Exec coupling inventory;
+- x86-64 MMU/NX/W^X/TLB audit;
+- ABI v1 compatibility contract;
+- trust/fault model;
+- U/A/N ownership classification;
+- m68kemu integration analysis;
+- HIDD/interface-generation analysis;
+- reproducible x86-64 build;
+- QEMU boot baseline;
+- baseline diagnostics;
+- regression-test inventory;
+- mandatory three-pass review process;
+- CI G0/G1/G2 foundations.
 
 Exit criteria:
 
-- current `pc-x86_64` can be built reproducibly from the recorded baseline;
-- current system reaches Wanderer in the reference VM;
-- privilege paths are classified;
-- the first Nexus primitive can be implemented without importing undefined Exec policy;
-- x86-64 MMU gaps are explicitly known;
-- baseline tests and boot artefacts are documented;
-- a low-level Nexus change cannot be accepted on compilation alone.
+- current AROS builds reproducibly;
+- reference QEMU reaches Wanderer;
+- upstream changes are routinely ingestible;
+- the first low-level extraction can be made without guessing about privilege, memory ownership or Exec policy;
+- no architectural document still assumes that the whole AROS runtime must live in a Legacy Cell.
 
-## Phase 1 — Nexus substrate
+## Phase 1 — Extract the first Nexus mechanisms under unchanged AROS
 
-Goal: introduce protection primitives without yet moving AROS into a Legacy Cell.
+Goal: create the first real Nexus substrate while preserving normal AROS behaviour.
 
-Initial platform: x86-64/QEMU.
+Initial target: x86-64/QEMU.
 
-### Phase 1A — Address-space seam
+### 1A — AddressSpace seam
 
-- introduce an architecture-neutral `NexusAddressSpace`;
-- wrap the current runtime MMU root without intended behaviour change;
-- make runtime CR3 ownership explicit;
-- route mapping/protection changes through an explicit target internally.
-
-Gate:
-
-- existing AROS reaches Wanderer unchanged.
-
-### Phase 1B — Executable permission and faults
-
-- implement real x86-64 NX handling;
-- enforce W^X by default for protected mappings;
-- classify faults by Nexus domain;
-- keep Nexus alive after an expected protected-domain fault.
+- represent the current runtime MMU root as `NexusAddressSpace`;
+- make runtime address-space ownership explicit;
+- centralize ordinary CR3 activation;
+- keep the existing AROS virtual layout unchanged;
+- keep public ABI behaviour unchanged.
 
 Gate:
 
-- deliberate write/execute protection violations produce controlled domain failure.
+- AROS still reaches Wanderer;
+- no intended user-visible difference.
 
-### Phase 1C — Multiple address spaces
+### 1B — real page protection
 
-- create a second runtime root;
-- map private code/data/stack;
-- switch through Nexus-owned CR3 activation;
-- implement correct local/remote TLB invalidation semantics.
-
-Gate:
-
-- private pages are inaccessible across spaces;
-- **L1 CPU memory isolation** is demonstrated.
-
-### Phase 1D — Explicit sharing and IPC
-
-Introduce the minimum additional objects:
-
-- MemoryObject;
-- Endpoint;
-- Capability;
-- minimal NexusThread representation required by the test payload.
+- enable/use hardware NX where supported;
+- establish supervisor write protection where compatible;
+- make R/W/X explicit in Nexus-native mapping logic;
+- make failure observable rather than silently ignored.
 
 Gate:
 
-- two protected execution contexts exchange a validated message;
-- the same MemoryObject is mapped with different rights;
-- fabricated/invalid authority does not expose unrelated memory.
+- protection tests are deterministic under QEMU.
 
-IRQ, Timer, Device and DMA objects follow only when required by the next boundary rather than being created speculatively.
+### 1C — domain-aware faults
 
-## Phase 2 — Legacy Cell prototype
+- classify faults by current Nexus execution context;
+- distinguish Nexus-core faults from protected-context faults;
+- collect diagnostics;
+- keep Nexus alive after an expected protected-context fault.
 
-Goal: move the existing AROS ABI v1 environment behind a real CPU/privilege boundary while preserving its internal shared-memory model.
+### 1D — second protected context
+
+- create a second address space;
+- run minimal private code/data/stack;
+- activate it through Nexus-owned mechanisms;
+- prove L1 CPU memory isolation;
+- implement correct TLB invalidation for the tested configuration.
+
+### 1E — explicit shared memory
+
+- introduce minimal `MemoryObject`;
+- map it intentionally into multiple AddressSpaces;
+- support different rights per mapping.
+
+No full AROS migration is required in Phase 1.
+
+## Phase 2 — Stable Nexus contracts and generation proof
+
+Goal: prevent Nexus from becoming a maintenance-heavy set of manual adapters.
 
 Work:
 
-- define the Legacy Cell bootstrap descriptor;
-- assign a private address space to the Cell;
-- map the memory layout expected by current AROS;
-- provide a Legacy kernel compatibility layer above Nexus;
-- virtualise `Supervisor()`, `SuperState()/UserState()` and `Disable()/Enable()`;
-- retain `Forbid()/Permit()` and the current Exec scheduler inside the Cell;
-- provide controlled virtual IRQ/event delivery;
-- keep physical CR3/IDT/APIC ownership in Nexus.
+- identify the minimum semantic contract format that can reuse existing AROS descriptions;
+- evaluate `genmodule`, FD files and HIDD `.conf` as sources of truth;
+- generate validation metadata/stubs for one small, low-risk interface;
+- support a direct path first;
+- add an isolated transport only if the experiment proves the contract is sound.
+
+The first generator proof should avoid:
+
+- graphics;
+- storage DMA;
+- complex callback-heavy HIDDs.
+
+Prefer a simple service/interface with clear scalar/handle semantics.
 
 Exit criteria:
 
-- ABI v1 Exec initializes inside the Cell;
-- DOS starts;
-- privilege virtualization cannot enter unrestricted Nexus supervisor state;
-- a deliberate CPU memory violation in the Cell cannot overwrite Nexus memory;
-- a fatal Cell fault does not halt Nexus;
-- the highest demonstrated isolation level is reported explicitly.
+- one interface description can drive more than one transport representation;
+- generated code is testable;
+- upstream interface changes can be detected without hand-auditing duplicate declarations.
 
-### Transitional Wanderer milestone
+## Phase 3 — Protected AROS execution as an additive capability
 
-Reaching Wanderer inside the Legacy Cell is a major compatibility proof, but **not automatically a full hardware-isolation proof**.
+Goal: allow selected AROS software to use protected execution without moving all existing software into a new personality.
 
-If legacy drivers still directly control MMIO, PCI or unrestricted DMA, the milestone must be labelled with the actual isolation level (for example L1/L2).
+Work may include:
 
-This prevents desktop success from being confused with completion of the security architecture.
+- protected process/thread creation;
+- capability-aware service access;
+- explicit shared MemoryObjects;
+- protected message endpoints;
+- compatibility adapters to ordinary AROS services.
 
-## Phase 3 — Service boundary and HIDD transport
+The exact public API is not frozen in advance.
 
-Goal: begin reaching **L3 hardware isolation** by moving selected machine-facing services outside the Legacy Cell.
+Gate:
 
-HIDD remains a strategic compatibility seam, but existing HIDD calls are not treated as IPC wire formats. Proxies translate pointer-rich legacy interfaces into explicit Nexus protocols.
+- one protected AROS program can coexist with normal ABI v1 software in the same system;
+- the user still experiences one AROS desktop/runtime.
 
-Start with services that are easier to virtualise before moving complex physical drivers.
+## Phase 4 — Selective service isolation
 
-Candidates:
+Goal: prove the direct/isolated dual-path architecture.
 
-1. monotonic timer/time service;
-2. logging/debug service;
-3. block-device proxy;
-4. simple input channel;
-5. framebuffer/surface transport.
-
-Define:
-
-- HIDD proxy transport;
-- request/reply format;
-- asynchronous completion model;
-- shared-memory ring format;
-- cancellation and timeout semantics.
-
-Exit criteria:
-
-- at least one unmodified or minimally modified ABI v1 subsystem talks through an HIDD proxy;
-- service restart does not require restarting Nexus.
-
-## Phase 4 — Storage isolation
-
-Goal: Nexus owns storage hardware and exposes block services to AROS.
-
-Order:
-
-1. reference virtual block driver under QEMU;
-2. AHCI;
-3. NVMe.
-
-Work includes:
-
-- DMA MemoryObjects;
-- interrupt routing;
-- IOMMU abstraction;
-- queue ownership;
-- block-service protocol;
-- legacy device bridge.
-
-Exit criteria:
-
-- AROS boots from storage served across the Nexus boundary;
-- storage driver failure is contained;
-- on IOMMU hardware, the device cannot DMA outside granted buffers.
-
-## Phase 5 — ABI v2 / ExecNG foundations
-
-Goal: enable genuinely protected native AROS applications.
-
-Initial concepts:
-
-- Process
-- Thread
-- Port/Endpoint
-- Event/Signal
-- Library service
-- MemoryObject
-- Handle
-- WaitSet
-
-Design requirement:
-
-The API should feel recognisably Exec-like while never requiring global shared pointers.
-
-Exit criteria:
-
-- native hello-world process;
-- two isolated processes exchanging messages;
-- shared-memory zero-copy example;
-- process crash containment;
-- basic debugger/introspection support.
-
-## Phase 6 — DOS NG and unified namespace
-
-Goal: legacy and protected applications see one coherent filesystem and service namespace.
-
-Implement:
-
-- VFS/service broker;
-- file handles as capabilities;
-- credentials and access checks;
-- legacy DOS bridge;
-- asynchronous I/O support.
-
-Exit criteria:
-
-- a legacy application and ABI v2 application can operate on the same file;
-- neither gains arbitrary access to the other's address space;
-- file permissions and credentials are enforced at the service boundary.
-
-## Phase 7 — Network service
-
-Goal: move network ownership outside the Legacy Cell.
+Choose one service where isolation has real value and QEMU can validate most behaviour.
 
 Work:
 
-- NIC driver domain;
-- packet-buffer MemoryObjects;
-- network-stack service;
-- ABI v1 bsdsocket bridge;
-- ABI v2 socket API;
-- IPv4/IPv6 tests.
+- define semantic interface;
+- direct implementation remains available;
+- generated/validated proxy path;
+- isolated service domain;
+- restart/failure experiment.
 
 Exit criteria:
 
-- legacy and native applications can share the network stack;
-- stack restart does not restart the desktop;
-- malformed remote traffic cannot directly corrupt the Legacy Cell or Nexus.
+- same conceptual AROS service works directly or across a Nexus boundary;
+- caller code does not need a completely separate API;
+- measured overhead is documented;
+- service failure does not require whole-system failure.
 
-## Phase 8 — Unified compositor
+## Phase 5 — Hardware authority and driver isolation
 
-Goal: preserve Intuition compatibility while enabling a modern display architecture.
+Goal: move machine privilege out of selected risky components.
+
+Mechanisms:
+
+- device authority;
+- MMIO mapping rights;
+- IRQ ownership;
+- PCI-function ownership;
+- DMA grants;
+- IOMMU domains.
+
+Progress driver by driver.
+
+Possible priorities:
+
+1. a QEMU-friendly virtual device;
+2. storage;
+3. network;
+4. USB;
+5. graphics/audio where practical.
+
+Every driver-domain milestone reports its actual L0-L5 isolation level.
+
+## Phase 6 — DMA/IOMMU hardening
+
+Goal: establish L4 where hardware supports it.
+
+Requirements:
+
+- Nexus-owned IOMMU configuration;
+- DMA mapping derived from authorized MemoryObjects;
+- device-specific DMA domain;
+- revocation;
+- real-hardware validation.
+
+This phase is subject to the hardware stop rule.
+
+QEMU success alone is not sufficient evidence for physical DMA containment.
+
+## Phase 7 — m68k compatibility convergence
+
+Goal: make classic Amiga compatibility improve with upstream AROS rather than through a separate Nexus stack.
+
+Primary implementation remains upstream `m68kemu.library`.
+
+Potential work:
+
+- strengthen tests;
+- improve containment;
+- improve generated thunks;
+- improve shadow synchronization;
+- reduce fixed limits;
+- improve multi-process behaviour;
+- evaluate JIT/DBT only when profiling justifies it.
+
+If a JIT is pursued, prefer an execution engine behind the existing m68kemu contract.
+
+Do not create a second transparent launcher/runtime without a strong reason.
+
+## Phase 8 — Desktop/service resilience
+
+Goal: use Nexus mechanisms to reduce the blast radius of user-visible failures.
+
+Possible work:
+
+- restartable network service;
+- isolated risky parsers;
+- optional desktop service restart;
+- surface/compositor evolution;
+- protected shared graphics buffers.
+
+Preserve Intuition/Zune/Wanderer compatibility.
+
+## Phase 9 — SMP and performance consolidation
+
+Goal: ensure protection does not destroy the Amiga expectation of responsiveness.
 
 Work:
 
-- compositor service;
-- surface MemoryObjects;
-- damage tracking;
-- input routing;
-- legacy Intuition surface bridge;
-- ABI v2 surface API.
+- remote TLB shootdown;
+- scheduling scalability;
+- lock/contention analysis;
+- IPC batching;
+- shared rings;
+- MemoryObject zero-copy;
+- PCID/architecture optimizations where justified;
+- benchmark direct versus isolated service paths.
 
-Later capabilities:
+Optimize measured bottlenecks, not imagined ones.
 
-- HiDPI;
-- multiple displays;
-- GPU acceleration;
-- animation;
-- remote display.
+## Phase 10 — ARM64 convergence
 
-Exit criteria:
+Goal: express the same Nexus contracts over current AROS ARM64 work.
 
-- legacy and native windows coexist on one desktop;
-- legacy applications require no awareness of the compositor architecture.
+Do not fork the runtime.
 
-## Phase 9 — Driver-domain expansion
+Reuse upstream platform progress.
 
-Move progressively:
+Port only the Nexus-owned mechanisms and adapted seams required by the architecture.
 
-- USB/xHCI;
-- audio/AHI backend;
-- GPU;
-- Wi-Fi/Ethernet;
-- additional storage and platform devices.
+## Phase 11 — RISC-V convergence
 
-Every migration must include a crash-containment test.
+Apply the same model to current AROS RISC-V/OpenSBI work.
 
-## Phase 10 — ARM64
+Use this phase as an architecture-neutrality test:
 
-Port the Nexus primitive layer, not the Legacy Cell architecture.
+> if a Nexus primitive only makes sense on x86-64, revisit the generic contract.
 
-Required parity:
+## Phase 12 — Automation and AI service foundations
 
-- address spaces;
-- capabilities;
-- IPC;
-- IRQ;
-- SMP scheduler;
-- timers;
-- DMA;
-- IOMMU where available;
-- Legacy Cell boot.
+Goal: make AROS programmable and agent-ready without putting AI in the kernel.
 
-## Phase 11 — RISC-V
+Possible work:
 
-Target OpenSBI/UEFI environments already relevant to AROS.
+- structured application command discovery;
+- capability-scoped tool access;
+- asynchronous AI/service broker;
+- provider abstraction;
+- MemoryObject-based large data exchange;
+- generic compute accelerator service/HIDD.
 
-Reach the same kernel primitive contract as x86-64 and ARM64 before adding platform-specific features.
+This phase must remain optional.
 
-## Phase 12 — Hardening
+AROS must boot, run and remain fully useful with no AI subsystem present.
 
-Required areas:
+See `AI_FOUNDATIONS.md`.
 
-- ASLR;
-- W^X everywhere possible;
-- guard pages;
-- stack protection;
-- capability-generation protection;
-- syscall/IPC validation;
-- fuzzing;
-- fault injection;
-- driver restart testing;
-- Legacy Cell escape testing;
-- IOMMU verification;
-- resource exhaustion controls.
+## Phase 13 — Migration SDK and ecosystem tools
 
-## Phase 13 — Migration SDK
+Provide tools to help developers understand where software fits.
 
-Developer-facing tools:
+Possible analysis output:
 
-- ABI v1 compatibility analyzer;
-- dangerous-pattern scanner;
-- ABI v2 headers;
-- bridge libraries;
-- porting guide;
-- examples;
-- automated classification of applications as:
-  - NG safe
-  - NG compatible
-  - legacy required
-  - privileged legacy
+- normal ABI v1;
+- protected-compatible;
+- direct-hardware dependency;
+- legacy privilege dependency;
+- cross-boundary raw-pointer dependency;
+- candidate for generated bridge.
 
-## Development rules
+Compiler/runtime modes may be explored later.
 
-Each phase must:
+## Upstream checkpoints
 
-1. build independently;
-2. preserve a usable reference configuration;
-3. include a rollback path;
-4. include reproducible tests;
-5. avoid unrelated refactors;
-6. document ABI and security changes through an ADR.
+At every major phase:
 
-The project must not disappear into a multi-year rewrite branch. The system should remain demonstrably alive after every architectural step.
+1. inspect latest upstream AROS;
+2. classify relevant changes U/A/N;
+3. integrate or account for them;
+4. update the recorded baseline only after successful build/test;
+5. remove Nexus workarounds made obsolete by upstream.
 
 ## Community checkpoints
 
-At the end of each major phase, the project should publish a short checkpoint covering:
+At the end of each major phase publish:
 
 - what was demonstrated;
-- what changed in the architecture;
-- what remained compatible;
-- known regressions or limitations;
-- benchmark or diagnostic evidence where relevant;
+- what changed;
+- what stayed compatible;
+- current upstream SHA reviewed;
+- measured regressions/overhead;
+- red-team findings;
+- active isolation level;
 - unresolved questions;
-- the next decision that needs community review.
+- next smallest safe step.
 
-The intention is to make Nexus easy to evaluate from evidence rather than from enthusiasm alone.
+## Architecture-change rule
+
+The roadmap is not a contract to preserve an implementation strategy forever.
+
+A substantial change is allowed when:
+
+- upstream evolves;
+- a prototype disproves an assumption;
+- performance data invalidates a boundary;
+- compatibility suffers;
+- security review finds a flaw;
+- hardware evidence contradicts the model.
+
+Such a change requires:
+
+- a new/superseding ADR;
+- the three-review protocol;
+- explicit migration impact;
+- updated roadmap.
+
+The project should never continue down a known-wrong path merely because it was once planned.
