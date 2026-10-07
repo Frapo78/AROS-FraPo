@@ -2,7 +2,21 @@
 
 GitHub Issues are the source of truth for task-level progress. This file is the high-level phase index.
 
-## Phase 0 — Baseline and guardrails
+## Architecture refinement
+
+### ADR-0002 — Convergent AROS / Nexus architecture
+Status: **formalized on feature branch; three-pass review pending**
+Issue: #18
+
+Core documents:
+- `adr/0002-convergent-aros-nexus-architecture.md`
+- `CONVERGENT_ARCHITECTURE.md`
+- `UPSTREAM_INTEGRATION.md`
+- `AI_FOUNDATIONS.md`
+
+The direction remains intentionally revisable through future ADRs when evidence justifies it.
+
+## Phase 0 — Convergence baseline and guardrails
 
 Parent: #1
 
@@ -44,7 +58,7 @@ Document:
 - `NEXUS_EXEC_SPLIT.md`
 
 ### P0.8 — x86-64 NX/W^X/MMU/TLB audit
-Status: **design documented / source audit pending**
+Status: **source audit in progress; findings remain valid under ADR-0002**
 Issue: #14
 
 Document:
@@ -60,7 +74,7 @@ Issue: #15
 Status: **blocked by Phase 0 gates**
 Issue: #7
 
-Scope: AS0/AS1 only — explicit representation and target ownership with no intended AROS semantic change.
+Scope: AS0/AS1 only — extract explicit AddressSpace representation beneath the normal AROS runtime, with no intended AROS semantic change and no mandatory Legacy Cell migration.
 
 ### P1 fault precondition — domain-aware fault classification
 Status: **blocked by P1.1 and Phase 0 audit**
