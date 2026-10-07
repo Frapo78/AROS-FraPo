@@ -23,8 +23,9 @@ Describe the smallest architectural change that solves it.
 How does this affect:
 
 - ABI v1:
-- Legacy Cells:
-- ABI v2:
+- protected AROS:
+- selective Legacy Cells:
+- m68k compatibility:
 - upstream mergeability:
 
 ## Trust / isolation impact
@@ -44,9 +45,19 @@ Does this add code to the Nexus trusted computing base?
 
 List meaningful alternatives and why they are weaker.
 
-## Testable proof
+## Falsifiable proof
 
-What experiment or test would demonstrate that the proposal works?
+What future experiment or test would demonstrate that the proposal works?
+
+What result would demonstrate that it is wrong?
+
+If no executable test is currently possible, apply **NO TEST, EXPLAIN WHY** and identify the prerequisite needed for a future test.
+
+## Verification gate
+
+- Expected evidence class E0-E7:
+- Human gate H0/H1/H2/H3:
+- Real hardware required?
 
 ## ADR
 
