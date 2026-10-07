@@ -44,6 +44,7 @@ jobs:
             docs/nexus/AI_FOUNDATIONS.md
             docs/nexus/UPSTREAM_INTEGRATION.md
             docs/nexus/CONVERGENT_ARCHITECTURE.md
+            docs/nexus/CONVERGENCE_RISKS.md
             docs/nexus/ROADMAP.md
             docs/nexus/TRUST_MODEL.md
             docs/nexus/LEGACY_PRIVILEGE_MODEL.md
