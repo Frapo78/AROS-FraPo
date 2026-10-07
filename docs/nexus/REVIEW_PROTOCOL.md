@@ -199,7 +199,15 @@ A productive cycle may end with:
 
 Stability and architectural clarity are the output; commit count is not.
 
-## 8. Definition of ready
+## 8. Branch enforcement
+
+The expected repository enforcement is defined in `BRANCH_POLICY.md`.
+
+For non-trivial implementation, the process should be enforced by pull requests and required status checks rather than relying only on maintainer discipline.
+
+Until GitHub branch protection is enabled, this remains a known governance gap.
+
+## 9. Definition of ready
 
 A change is ready for integration only when:
 
