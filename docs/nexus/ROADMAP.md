@@ -2,6 +2,19 @@
 
 > This roadmap is ordered by architectural dependency, not by visibility to end users.
 
+The roadmap is deliberately incremental. Nexus should never depend on a distant "big rewrite" moment before it becomes useful or testable.
+
+Each major phase should produce something the AROS community can inspect, run, measure and criticise. A phase is not considered successful merely because the code compiles: it should demonstrate a concrete architectural property while preserving the agreed compatibility baseline.
+
+## Roadmap principles
+
+- **Keep AROS alive while changing it.** Every phase should leave a usable reference configuration.
+- **Prefer proofs over promises.** A protected address space, contained fault or restartable driver is more valuable than a large speculative framework.
+- **Protect compatibility with tests.** ABI v1 behaviour must be measured rather than assumed.
+- **Keep upstream in sight.** Localise Nexus changes and avoid unnecessary divergence.
+- **Make milestones discussable.** Important design changes should be documented in ADRs before they spread through the tree.
+- **Do not confuse modernisation with expansion of scope.** The roadmap should solve architectural blockers first, then broaden hardware and user-facing capabilities.
+
 ## Phase 0 — Baseline and guardrails
 
 Goal: make regressions measurable before changing low-level behaviour.
@@ -293,3 +306,17 @@ Each phase must:
 6. document ABI and security changes through an ADR.
 
 The project must not disappear into a multi-year rewrite branch. The system should remain demonstrably alive after every architectural step.
+
+## Community checkpoints
+
+At the end of each major phase, the project should publish a short checkpoint covering:
+
+- what was demonstrated;
+- what changed in the architecture;
+- what remained compatible;
+- known regressions or limitations;
+- benchmark or diagnostic evidence where relevant;
+- unresolved questions;
+- the next decision that needs community review.
+
+The intention is to make Nexus easy to evaluate from evidence rather than from enthusiasm alone.
