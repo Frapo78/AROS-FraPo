@@ -1,6 +1,6 @@
 # ADR-0001: Two-domain architecture
 
-- Status: Accepted
+- Status: Accepted in principle; deployment topology refined by ADR-0002
 - Date: 2026-10-07
 - Scope: Nexus architecture
 
@@ -76,3 +76,14 @@ Rejected as the final architecture because it treats AROS as a guest rather than
 No future optimization may collapse the Legacy and Protected memory-safety contracts into one implicit shared-address-space contract.
 
 Changing this decision requires a superseding ADR with a demonstrably equivalent solution for both binary compatibility and hardware-enforced isolation.
+
+
+## Refinement by ADR-0002
+
+ADR-0002 preserves the core safety conclusion of this ADR: shared-pointer compatibility semantics and protected memory-safety semantics cannot be collapsed into one implicit trust contract.
+
+ADR-0002 changes the deployment conclusion.
+
+The normal AROS runtime is no longer required to live permanently inside a Legacy Cell. Nexus instead introduces protected boundaries selectively beneath or around AROS components while AROS remains the primary runtime.
+
+Legacy Cells remain valid containment tools for cases that genuinely require them.
