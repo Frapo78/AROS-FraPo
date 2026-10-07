@@ -292,6 +292,29 @@ The harness deliberately rejects:
 - "QEMU launched" == "AROS booted";
 - "compiled" == "baseline advanced".
 
+## Fast harness self-test
+
+The repository sanity workflow executes:
+
+```sh
+scripts/nexus/baseline/selftest.sh
+```
+
+This test does **not** compile or boot AROS. It uses a fake ISO/build manifest
+and a fake QEMU executable to verify the evidence logic itself.
+
+It currently checks that:
+
+- a successful interactive run preserves build provenance;
+- the run records the QEMU binary identity;
+- a manual Wanderer pass is tied to a completed successful run;
+- an existing verification cannot be silently overwritten;
+- a headless run cannot be marked as a manual Wanderer pass;
+- a QEMU error cannot be marked as a pass;
+- a modified ISO is rejected when its hash no longer matches the build manifest.
+
+This protects the harness against false evidence while G1/G2 remain pending.
+
 ## Current limitation
 
 This v0 harness is source-reviewed tooling, not runtime evidence.
