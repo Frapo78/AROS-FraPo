@@ -19,24 +19,24 @@ If you are new to the project, read these in order:
 3. [Convergent Architecture](CONVERGENT_ARCHITECTURE.md) — the detailed three-plane model, U/A/N ownership, service fabric and evolution rules.
 4. [ADR-0002](adr/0002-convergent-aros-nexus-architecture.md) — why AROS remains the primary runtime and Nexus becomes the small executive beneath it.
 5. [Convergence Risks](CONVERGENCE_RISKS.md) — red-team risk register, trust ratchet and bridgeability failure modes.
-5. [Trust and Fault Model](TRUST_MODEL.md) — what Nexus protects and the explicit isolation levels.
-6. [Legacy Privilege Model](LEGACY_PRIVILEGE_MODEL.md) — how Supervisor, Disable/Enable and machine privilege must change at the Cell boundary.
-7. [Nexus / Exec Split](NEXUS_EXEC_SPLIT.md) — why current kernel.resource is an extraction seam rather than the final Nexus API.
-8. [Address-Space Model](ADDRESS_SPACE_MODEL.md) — the first implementation primitive, including NX/W^X, CR3, faults and SMP TLB rules.
-9. [Roadmap](ROADMAP.md) — how the work is divided into demonstrable phases.
-10. [Baseline](BASELINE.md) — the exact upstream reference state and synchronization policy.
-11. [x86-64 Boot Map](X86_64_BOOT_MAP.md) — where the current AROS boot path gives us practical insertion points.
-12. [Bootstrap MVP](BOOTSTRAP_MVP.md) — the first implementation proof.
-13. [ABI v1 Compatibility Contract](ABI_V1_COMPAT.md) — what Nexus must not casually break.
-14. [ADR-0001](adr/0001-two-domain-architecture.md) — why the two-domain decision exists.
-15. [Upstream Integration](UPSTREAM_INTEGRATION.md) — U/A/N ownership and continuous upstream intake.
-16. [AI and Automation Foundations](AI_FOUNDATIONS.md) — future-ready service/capability foundations without putting AI in the kernel.
-17. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
-18. [CI and validation](CI_STRATEGY.md) — staged build, QEMU and hardware gates.
-19. [Review Protocol](REVIEW_PROTOCOL.md) — mandatory three-pass review and red-team process.
-20. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
-21. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
-22. [Tasks](TASKS.md) — current phase status and issue links.
+6. [Trust and Fault Model](TRUST_MODEL.md) — what Nexus protects and the explicit isolation levels.
+7. [Legacy Privilege Model](LEGACY_PRIVILEGE_MODEL.md) — how Supervisor, Disable/Enable and machine privilege must change at explicit protection boundaries.
+8. [Nexus / Exec Split](NEXUS_EXEC_SPLIT.md) — why current kernel.resource is an extraction seam rather than the final Nexus API.
+9. [Address-Space Model](ADDRESS_SPACE_MODEL.md) — the first implementation primitive, including NX/W^X, CR3, faults and SMP TLB rules.
+10. [Roadmap](ROADMAP.md) — how the work is divided into demonstrable phases.
+11. [Baseline](BASELINE.md) — the exact upstream reference state and synchronization policy.
+12. [x86-64 Boot Map](X86_64_BOOT_MAP.md) — where the current AROS boot path gives us practical insertion points.
+13. [Bootstrap MVP](BOOTSTRAP_MVP.md) — the first implementation proof.
+14. [ABI v1 Compatibility Contract](ABI_V1_COMPAT.md) — what Nexus must not casually break.
+15. [ADR-0001](adr/0001-two-domain-architecture.md) — the original compatibility/protection split, refined by ADR-0002.
+16. [Upstream Integration](UPSTREAM_INTEGRATION.md) — U/A/N ownership and continuous upstream intake.
+17. [AI and Automation Foundations](AI_FOUNDATIONS.md) — future-ready service/capability foundations without putting AI in the kernel.
+18. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
+19. [CI and validation](CI_STRATEGY.md) — staged build, QEMU and hardware gates.
+20. [Review Protocol](REVIEW_PROTOCOL.md) — mandatory three-pass review and red-team process.
+21. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
+22. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
+23. [Tasks](TASKS.md) — current phase status and issue links.
 
 ## The idea in one paragraph
 
