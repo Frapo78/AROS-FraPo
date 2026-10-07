@@ -68,6 +68,17 @@ Document:
 Status: **G0 repository sanity active; G1/G2 build and QEMU gates pending**
 Issue: #15
 
+### P0.10 — Evidence-driven agent engineering
+Status: **controls defined; three-pass review complete; integration tracked by #22 / PR #23**
+Issue: #22
+
+Core controls:
+- root `AGENTS.md`;
+- `VERIFICATION_MODEL.md`;
+- Evidence Red Team with **NO TEST, EXPLAIN WHY**;
+- H0-H3 human/hardware gates;
+- falsifiable task templates.
+
 ## Phase 1 preparation
 
 ### P1.1 — Internal NexusAddressSpace abstraction

@@ -50,7 +50,10 @@ Purpose:
 
 - focused implementation or experiment;
 - one logical scope;
+- one logical integrator responsible for final coherence;
 - disposable after integration.
+
+Multiple agents may contribute to one feature branch, but the branch must not become unowned patch accumulation.
 
 A feature branch may fail temporarily. `nexus/main` should not.
 
@@ -78,13 +81,21 @@ GitHub's "required approving reviews" is not a substitute for the Nexus three-pa
 
 The three required passes are different analyses:
 
-1. correctness/scope;
-2. regression/concurrency/upstream integration;
-3. adversarial red-team.
+1. Construction — correctness/scope;
+2. Integration — regression/concurrency/upstream;
+3. Evidence Red Team — active falsification through tests/evidence.
+
+Review 3 follows the rule **NO TEST, EXPLAIN WHY** when an executable adversarial test is not yet possible.
 
 During early development Francesco Poltero may perform multiple passes himself, but they must be separated in purpose and evidence.
 
-As the contributor base grows, at least one independent reviewer should be required for protection-boundary and kernel changes.
+Kernel/protection work is H1 and requires human technical review before merge.
+
+Physical-hardware-dependent claims are H2.
+
+Strong release-level L2-L5 security claims are H3 and require independent competent review.
+
+See `VERIFICATION_MODEL.md`.
 
 ## 4. No same-step implementation and acceptance
 

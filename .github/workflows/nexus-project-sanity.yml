@@ -6,6 +6,8 @@ on:
       - nexus/main
     paths:
       - 'docs/nexus/**'
+      - 'AGENTS.md'
+      - 'scripts/nexus/**'
       - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -16,6 +18,8 @@ on:
       - nexus/main
     paths:
       - 'docs/nexus/**'
+      - 'AGENTS.md'
+      - 'scripts/nexus/**'
       - 'README.md'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -30,13 +34,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Verify required Nexus documents
         shell: bash
         run: |
           set -euo pipefail
           required=(
+            AGENTS.md
             docs/nexus/README.md
             docs/nexus/VISION.md
             docs/nexus/ARCHITECTURE.md
@@ -52,11 +57,15 @@ jobs:
             docs/nexus/ADDRESS_SPACE_MODEL.md
             docs/nexus/BASELINE.md
             docs/nexus/CI_STRATEGY.md
+            docs/nexus/VERIFICATION_MODEL.md
             docs/nexus/REVIEW_PROTOCOL.md
             docs/nexus/GOVERNANCE.md
             docs/nexus/ABI_V1_COMPAT.md
             docs/nexus/BOOTSTRAP_MVP.md
             docs/nexus/TASKS.md
+            .github/ISSUE_TEMPLATE/nexus_engineering_task.md
+            .github/pull_request_template.md
+            scripts/nexus/verify-agent-contract.sh
           )
           for file in "${required[@]}"; do
             test -f "$file" || {
@@ -109,11 +118,29 @@ jobs:
 
           print("Nexus local Markdown links are valid.")
 
+      - name: Run agent-contract adversarial self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/nexus/verify-agent-contract.sh
+          scripts/nexus/verify-agent-contract.sh --selftest
+
       - name: Check Nexus process references
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'three distinct review passes' docs/nexus/REVIEW_PROTOCOL.md
+          grep -q 'three distinct review' docs/nexus/REVIEW_PROTOCOL.md
+          grep -q 'NO TEST, EXPLAIN WHY' AGENTS.md
+          grep -q 'Evidence Red Team' docs/nexus/REVIEW_PROTOCOL.md
+          grep -q 'H1 — mandatory human technical review' docs/nexus/VERIFICATION_MODEL.md
+          grep -q 'No L1-L5 claim is accepted' AGENTS.md
+          test "$(wc -l < AGENTS.md)" -le 300
+          grep -q '## Acceptance criteria' .github/ISSUE_TEMPLATE/nexus_engineering_task.md
+          grep -q '## Negative / red-team criteria' .github/ISSUE_TEMPLATE/nexus_engineering_task.md
+          grep -q '## Review 3 test plan' .github/ISSUE_TEMPLATE/nexus_engineering_task.md
+          grep -q '## Review 3 — Evidence Red Team' .github/pull_request_template.md
+          grep -q 'NO TEST, EXPLAIN WHY' .github/pull_request_template.md
+          grep -q '## Human / hardware gate' .github/pull_request_template.md
           grep -q 'Francesco Poltero' docs/nexus/GOVERNANCE.md
           grep -q 'info@francescopoltero.com' docs/nexus/GOVERNANCE.md
           grep -q '2edd46536d08e3b54ecd1315f337a9b7de896f3a' docs/nexus/BASELINE.md

@@ -8,7 +8,11 @@ The project asks whether AROS can preserve that character while progressively ex
 
 This is **not an official AROS roadmap** and it is not an attempt to turn AROS into a Unix-like operating system. It is an experimental fork intended to test a deep architectural direction in working code while remaining respectful of and synchronisable with upstream AROS.
 
-**Read first:**
+**For implementation/review work, read first:**
+- [AGENTS.md](AGENTS.md) — concise operational contract for AI-assisted Nexus engineering
+- [Verification Model](docs/nexus/VERIFICATION_MODEL.md)
+
+**Architecture:**
 - [Nexus Vision](docs/nexus/VISION.md)
 - [Nexus overview](docs/nexus/README.md)
 - [Architecture](docs/nexus/ARCHITECTURE.md)
@@ -22,7 +26,7 @@ Development happens primarily on `nexus/main` and `nexus/bootstrap-x86_64`. The 
 **Project direction:** Francesco Poltero  
 **Contact:** info@francescopoltero.com
 
-See [Nexus Governance](docs/nexus/GOVERNANCE.md) and the [mandatory review protocol](docs/nexus/REVIEW_PROTOCOL.md).
+See [Nexus Governance](docs/nexus/GOVERNANCE.md), the [Verification Model](docs/nexus/VERIFICATION_MODEL.md) and the [mandatory review protocol](docs/nexus/REVIEW_PROTOCOL.md).
 
 ---
 

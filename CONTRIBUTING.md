@@ -29,19 +29,30 @@ Nexus should not maintain a private copy of a generally useful AROS fix without 
 
 ## Before coding
 
-For non-trivial Nexus changes, the mandatory process in `docs/nexus/REVIEW_PROTOCOL.md` applies.
+For non-trivial Nexus changes, the mandatory process in `AGENTS.md`, `docs/nexus/REVIEW_PROTOCOL.md` and `docs/nexus/VERIFICATION_MODEL.md` applies.
 
-
-1. read `docs/nexus/VISION.md`;
+1. read `AGENTS.md`;
 2. read the relevant architecture documents and ADRs;
 3. find or open a GitHub Issue for the concrete task;
-4. describe any change to an architectural invariant before implementing it.
+4. define goal and non-goals;
+5. classify U/A/N ownership and B0-B3 bridgeability when applicable;
+6. define acceptance and negative/red-team criteria before implementation;
+7. identify required automated, human and hardware evidence;
+8. describe any change to an architectural invariant before implementing it.
+
+If a task cannot be meaningfully falsified, refine the task before coding.
 
 Use GitHub Discussions for broad design conversations and Issues for work that can be completed and tested.
 
 ## Pull request rules
 
-A Nexus pull request may not be considered ready until three distinct review passes have been documented: correctness/scope, regression/integration, and adversarial red-team.
+A Nexus pull request may not be considered ready until three distinct review passes have been documented:
+
+1. Construction;
+2. Integration;
+3. Evidence Red Team.
+
+Review 3 should produce an adversarial executable test whenever practical. If it cannot, the PR must follow **NO TEST, EXPLAIN WHY**.
 
 A Nexus pull request should:
 
@@ -51,11 +62,20 @@ A Nexus pull request should:
 - state the tested target(s);
 - state the highest isolation level actually demonstrated, where relevant;
 - describe failure/recovery behaviour;
-- include a regression test or reproducible verification whenever practical;
+- include a regression/negative test or reproducible verification whenever practical;
+- state the evidence class achieved;
+- state the required human gate H0/H1/H2/H3;
+- identify one logical integrator for the branch;
 - avoid unrelated formatting/refactoring;
 - preserve ABI v1 unless the PR explicitly documents a compatibility impact.
 
-For low-level work, include the exact QEMU or hardware test environment when possible.
+For low-level work, include the exact QEMU or hardware test environment.
+
+Kernel/MMU/scheduler/privilege/capability/ABI-boundary work is H1 and requires human technical review before merge.
+
+Hardware-dependent claims are H2.
+
+Strong release-level L2-L5 security claims are H3 and require independent competent review.
 
 ## Architecture review
 
@@ -84,6 +104,21 @@ For Nexus, changes should be merged only after:
 - known limitations are documented.
 
 As the contributor base grows, this policy should evolve toward independent review rather than relying on a single maintainer.
+
+## AI-assisted development and upstream
+
+Nexus uses AI-assisted engineering, but AI output does not replace authorship responsibility, testing, provenance review or licensing review.
+
+At the time this section was written, the current upstream AROS `CONTRIBUTING.md` contains no explicit blanket prohibition on AI-assisted contributions. That is not a permanent guarantee.
+
+Before submitting significant Nexus-originated work upstream:
+
+- re-read current upstream contribution policy;
+- discuss the change with the AROS core team where their policy requests it;
+- ask whether specific AI-assistance disclosure is expected;
+- disclose assistance honestly when relevant;
+- ensure the human submitter can explain and defend the code and test evidence;
+- verify license/provenance independently of model output.
 
 ## Coding style and portability
 
