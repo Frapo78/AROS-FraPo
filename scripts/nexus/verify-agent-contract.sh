@@ -45,7 +45,7 @@ check_contract()
     require_pattern "$root" AGENTS.md 'one logical integrator' || return 1
 
     require_pattern "$root" docs/nexus/VERIFICATION_MODEL.md 'H1 — mandatory human technical review' || return 1
-    require_pattern "$root" docs/nexus/VERIFICATION_MODEL.md 'E6 — physical hardware' || return 1
+    require_pattern "$root" docs/nexus/VERIFICATION_MODEL.md 'E6 — physical-hardware evidence' || return 1
     require_pattern "$root" docs/nexus/VERIFICATION_MODEL.md 'AI-only review is not sufficient' || return 1
 
     require_pattern "$root" docs/nexus/REVIEW_PROTOCOL.md 'Review 3 — Evidence Red Team' || return 1
