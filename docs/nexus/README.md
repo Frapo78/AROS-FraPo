@@ -27,7 +27,10 @@ If you are new to the project, read these in order:
 11. [ABI v1 Compatibility Contract](ABI_V1_COMPAT.md) — what Nexus must not casually break.
 12. [ADR-0001](adr/0001-two-domain-architecture.md) — why the two-domain decision exists.
 13. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
-14. [Tasks](TASKS.md) — current phase status and issue links.
+14. [CI and validation](CI_STRATEGY.md) — staged build, QEMU and hardware gates.
+15. [Review Protocol](REVIEW_PROTOCOL.md) — mandatory three-pass review and red-team process.
+16. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
+17. [Tasks](TASKS.md) — current phase status and issue links.
 
 ## The idea in one paragraph
 
@@ -97,6 +100,30 @@ The current work is intentionally conservative:
 The first implementation target is not a new desktop or a new API.
 
 It is a minimal `NexusAddressSpace` abstraction around the current x86-64 MMU path, with **no intended observable change to AROS**.
+
+## Project direction
+
+Nexus is directed by **Francesco Poltero**.
+
+Project contact: **info@francescopoltero.com**
+
+The direction of the project is independent from the official AROS Development Team while remaining intentionally respectful of and continuously informed by upstream AROS work.
+
+See [GOVERNANCE.md](GOVERNANCE.md).
+
+## Engineering pace
+
+Nexus deliberately optimizes for correctness rather than speed.
+
+Every non-trivial code or architecture change requires at least three review passes:
+
+1. correctness and scope;
+2. regression/concurrency/upstream integration;
+3. adversarial red-team.
+
+Physical-hardware validation is a hard stop when QEMU cannot establish the required property.
+
+See [REVIEW_PROTOCOL.md](REVIEW_PROTOCOL.md) and [CI_STRATEGY.md](CI_STRATEGY.md).
 
 ## Branches
 
