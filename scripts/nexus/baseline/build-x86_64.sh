@@ -76,24 +76,24 @@ gcc_version="${NEXUS_GCC_VERSION:-$source_gcc_default}"
 binutils_version="${NEXUS_BINUTILS_VERSION:-$source_binutils_default}"
 
 work_root="${NEXUS_WORK_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/aros-nexus/baseline}"
-build_dir="$work_root/build-$target-$profile"
-ports_dir="$work_root/portssources"
 
 crosstools_tree="$(git -C "$repo_root" rev-parse HEAD:tools/crosstools)"
 collect_tree="$(git -C "$repo_root" rev-parse HEAD:tools/collect-aros)"
+stage_driver_blob="$(git -C "$repo_root" rev-parse HEAD:scripts/azure/aros-stage.sh)"
+configure_blob="$(git -C "$repo_root" rev-parse HEAD:configure)"
 
-toolchain_key="$(
+toolchain_input_key="$(
     printf '%s\n' \
+        "$source_sha" \
         "$target" \
         "$gcc_version" \
         "$binutils_version" \
         "$crosstools_tree" \
-        "$collect_tree" |
+        "$collect_tree" \
+        "$stage_driver_blob" \
+        "$configure_blob" |
         sha256_text
 )"
-
-toolchain_dir="$work_root/toolchains/$toolchain_key"
-toolchain_marker="$toolchain_dir/.nexus-toolchain-complete"
 
 source_key="$source_sha"
 if [ "$source_dirty" = yes ]; then
@@ -101,7 +101,11 @@ if [ "$source_dirty" = yes ]; then
 fi
 
 attempt_id="$(date -u '+%Y%m%dT%H%M%SZ')-$$"
-artifact_dir="$work_root/artifacts/$source_key/$profile/$toolchain_key/$attempt_id"
+run_root="$work_root/runs/$source_key/$profile/$attempt_id"
+build_dir="$run_root/build"
+toolchain_dir="$run_root/toolchain"
+ports_dir="$work_root/portssources"
+artifact_dir="$run_root/artifacts"
 
 if [ -n "${BUILDTHREADS:-}" ]; then
     jobs="$BUILDTHREADS"
@@ -118,9 +122,8 @@ case "$jobs" in
     0) die "BUILDTHREADS must be greater than zero" ;;
 esac
 
-mkdir -p "$work_root" "$ports_dir" "$artifact_dir"
-rm -rf "$build_dir"
-mkdir -p "$build_dir"
+[ ! -e "$run_root" ] || die "run path already exists: $run_root"
+mkdir -p "$build_dir" "$toolchain_dir" "$ports_dir" "$artifact_dir"
 
 manifest="$artifact_dir/build-manifest.txt"
 iso_out="$artifact_dir/aros-pc-x86_64.iso"
@@ -162,8 +165,11 @@ trap finish EXIT
     fi
     printf 'CROSSTOOLS_TREE=%s\n' "$crosstools_tree"
     printf 'COLLECT_AROS_TREE=%s\n' "$collect_tree"
-    printf 'TOOLCHAIN_KEY=%s\n' "$toolchain_key"
+    printf 'STAGE_DRIVER_BLOB=%s\n' "$stage_driver_blob"
+    printf 'CONFIGURE_BLOB=%s\n' "$configure_blob"
+    printf 'TOOLCHAIN_INPUT_KEY=%s\n' "$toolchain_input_key"
     printf 'ATTEMPT_ID=%s\n' "$attempt_id"
+    printf 'RUN_ROOT=%s\n' "$run_root"
     printf 'BUILDTHREADS=%s\n' "$jobs"
     printf 'HOST_UNAME=%s\n' "$(uname -a | tr '\r\n' '  ')"
     printf 'BUILD_DIR=%s\n' "$build_dir"
@@ -199,21 +205,8 @@ export AROSBUILDTOOLCHAINDIR="$toolchain_dir"
 export AROSPORTSSRCSDIR="$ports_dir"
 export BUILDTHREADS="$jobs"
 
-if [ "${NEXUS_FORCE_TOOLCHAIN:-0}" = 1 ]; then
-    rm -rf "$toolchain_dir"
-fi
-
-if [ ! -f "$toolchain_marker" ]; then
-    rm -rf "$toolchain_dir"
-    mkdir -p "$toolchain_dir"
-
-    printf 'Building AROS toolchain (key %s)...\n' "$toolchain_key"
-    "$repo_root/scripts/azure/aros-stage.sh" toolchain "${configure_args[@]}"
-
-    printf '%s\n' "$toolchain_key" > "$toolchain_marker"
-else
-    printf 'Reusing verified toolchain cache %s\n' "$toolchain_key"
-fi
+printf 'Building fresh AROS toolchain for this baseline attempt...\n'
+"$repo_root/scripts/azure/aros-stage.sh" toolchain "${configure_args[@]}"
 
 # The stage driver is upstream-owned. Use it for the core build instead of
 # copying its configure/build policy into Nexus tooling.
