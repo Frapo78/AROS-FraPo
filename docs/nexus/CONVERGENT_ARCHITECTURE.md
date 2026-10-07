@@ -467,3 +467,56 @@ The architecture is working if:
 - new hardware and CPU targets do not require redesigning the whole runtime;
 - AI/automation can be added as services without enlarging the kernel TCB;
 - the system remains fast enough to preserve the Amiga expectation of responsiveness.
+
+
+## 18. Trust ratchet
+
+Convergence must reduce privileged authority over time rather than merely add abstractions.
+
+For each machine authority, the migration should move from:
+
+```
+legacy-owned
+    ↓
+shared/adapted
+    ↓
+Nexus-owned for protected modes
+```
+
+Once a protected deployment relies on Nexus ownership of an authority, that deployment must not silently regain a direct legacy bypass.
+
+The normal ABI v1 Compatibility Trust Domain may remain less protected during migration; its actual trust level must be stated honestly.
+
+## 19. Bridgeability
+
+Not every AROS interface can cross a protection boundary transparently.
+
+Interfaces are classified as:
+
+- **B0** — direct-only legacy;
+- **B1** — generated value/handle bridge;
+- **B2** — explicit manual bridge;
+- **B3** — protected-native contract.
+
+Pointer-rich/callback-heavy APIs must not be forced into a generated IPC form simply to preserve superficial transparency.
+
+See `CONVERGENCE_RISKS.md`.
+
+## 20. Known-risk discipline
+
+ADR-0002 is not treated as risk-free.
+
+The project maintains `CONVERGENCE_RISKS.md` as a living adversarial register covering:
+
+- transitional compatibility privilege;
+- direct/isolated semantic drift;
+- unsafe generation;
+- adapter growth;
+- upstream bypasses;
+- m68kemu security assumptions;
+- protected/legacy API crossing;
+- portability;
+- AI scope;
+- selective-isolation failure modes.
+
+A new red-team finding may change the architecture through a later ADR.
