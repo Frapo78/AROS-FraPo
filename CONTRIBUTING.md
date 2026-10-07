@@ -1,4 +1,104 @@
-# Contributing to AROS
+# Contributing to AROS-FraPo / Nexus
+
+This repository is an experimental fork of AROS used to develop and test the Nexus architecture.
+
+The rules in this section apply to Nexus work in this fork. The original upstream AROS contribution guidance is preserved below because Nexus intends to remain compatible with upstream coding and testing practices.
+
+## Where a contribution belongs
+
+### Nexus architectural work
+
+Use this repository when the change is specifically related to:
+
+- Nexus address spaces;
+- Legacy Cell containment;
+- protected execution;
+- privilege virtualization;
+- fault isolation;
+- capability/IPC work;
+- driver-domain work;
+- Nexus-specific tests, tooling or documentation.
+
+Target `nexus/main` through a focused feature branch or pull request.
+
+### General AROS fixes
+
+If a change is independently useful to normal AROS and does not depend on Nexus, contributors are encouraged to consider submitting it to the upstream AROS Development Team as well.
+
+Nexus should not maintain a private copy of a generally useful AROS fix without a good reason.
+
+## Before coding
+
+For non-trivial Nexus changes:
+
+1. read `docs/nexus/VISION.md`;
+2. read the relevant architecture documents and ADRs;
+3. find or open a GitHub Issue for the concrete task;
+4. describe any change to an architectural invariant before implementing it.
+
+Use GitHub Discussions for broad design conversations and Issues for work that can be completed and tested.
+
+## Pull request rules
+
+A Nexus pull request should:
+
+- contain one logical change;
+- identify the related issue;
+- state the upstream baseline used;
+- state the tested target(s);
+- state the highest isolation level actually demonstrated, where relevant;
+- describe failure/recovery behaviour;
+- include a regression test or reproducible verification whenever practical;
+- avoid unrelated formatting/refactoring;
+- preserve ABI v1 unless the PR explicitly documents a compatibility impact.
+
+For low-level work, include the exact QEMU or hardware test environment when possible.
+
+## Architecture review
+
+Changes to any of the following should normally update or reference an ADR:
+
+- protection boundary;
+- trust model;
+- ABI contract;
+- privilege model;
+- address-space ownership;
+- scheduler ownership;
+- IPC/capability semantics;
+- hardware/DMA ownership.
+
+A large implementation is not a substitute for an architectural explanation.
+
+## Merge policy
+
+The upstream AROS rule requiring sign-off from two upstream core developers applies to the upstream AROS project, not automatically to this experimental fork.
+
+For Nexus, changes should be merged only after:
+
+- the relevant tests pass;
+- the architectural impact is understood;
+- the change is small enough to review;
+- known limitations are documented.
+
+As the contributor base grows, this policy should evolve toward independent review rather than relying on a single maintainer.
+
+## Coding style and portability
+
+Nexus inherits the AROS coding conventions unless a Nexus-specific document explicitly says otherwise.
+
+In particular:
+
+- use Unix LF line endings;
+- isolate architecture-specific code;
+- consider 32/64-bit and LE/BE assumptions;
+- do not introduce unnecessary compiler-specific behaviour;
+- keep changes upstream-mergeable where practical.
+
+---
+
+# Upstream AROS contribution guidance
+
+The following is preserved from the upstream repository and remains useful for coding style, portability and the process used when contributing changes back to AROS.
 
 ## Applying for access
 
