@@ -183,6 +183,7 @@ trap finish EXIT
     printf 'SUBMODULE_MANIFEST=%s\n' "$submodule_manifest"
     printf 'SUBMODULE_MANIFEST_SHA256=%s\n' "$(sha256_file "$submodule_manifest")"
     printf 'BUILDTHREADS=%s\n' "$jobs"
+    printf 'CCACHE_DISABLE=1\n'
     printf 'HOST_UNAME=%s\n' "$(uname -a | tr '\r\n' '  ')"
     printf 'BUILD_DIR=%s\n' "$build_dir"
     printf 'TOOLCHAIN_DIR=%s\n' "$toolchain_dir"
@@ -216,6 +217,10 @@ export AROSBUILDDIR="$build_dir"
 export AROSBUILDTOOLCHAINDIR="$toolchain_dir"
 export AROSPORTSSRCSDIR="$ports_dir"
 export BUILDTHREADS="$jobs"
+
+# The upstream stage driver enables ccache. Baseline evidence deliberately
+# disables cache reuse so a previous host build cannot satisfy this attempt.
+export CCACHE_DISABLE=1
 
 printf 'Building fresh AROS toolchain for this baseline attempt...\n'
 "$repo_root/scripts/azure/aros-stage.sh" toolchain "${configure_args[@]}"
