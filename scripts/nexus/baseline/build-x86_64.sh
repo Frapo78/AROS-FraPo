@@ -85,9 +85,10 @@ toolchain_marker="$toolchain_dir/.nexus-toolchain-complete"
 
 source_key="$source_sha"
 if [ "$source_dirty" = yes ]; then
-    source_key="$source_sha-dirty-$(date -u '+%Y%m%dT%H%M%SZ')"
+    source_key="$source_sha-dirty"
 fi
-artifact_dir="$work_root/artifacts/$source_key/$profile/$toolchain_key"
+attempt_id="$(date -u '+%Y%m%dT%H%M%SZ')-$"
+artifact_dir="$work_root/artifacts/$source_key/$profile/$toolchain_key/$attempt_id"
 
 if [ -n "${BUILDTHREADS:-}" ]; then
     jobs="$BUILDTHREADS"
@@ -140,6 +141,7 @@ trap finish EXIT
     printf 'CROSSTOOLS_TREE=%s\n' "$crosstools_tree"
     printf 'COLLECT_AROS_TREE=%s\n' "$collect_tree"
     printf 'TOOLCHAIN_KEY=%s\n' "$toolchain_key"
+    printf 'ATTEMPT_ID=%s\n' "$attempt_id"
     printf 'BUILDTHREADS=%s\n' "$jobs"
     printf 'HOST_UNAME=%s\n' "$(uname -a | tr '\n' ' ')"
     printf 'BUILD_DIR=%s\n' "$build_dir"
