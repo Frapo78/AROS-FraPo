@@ -18,6 +18,7 @@ If you are new to the project, read these in order:
 2. [Architecture](ARCHITECTURE.md) — the convergent AROS/Nexus model and technical invariants.
 3. [Convergent Architecture](CONVERGENT_ARCHITECTURE.md) — the detailed three-plane model, U/A/N ownership, service fabric and evolution rules.
 4. [ADR-0002](adr/0002-convergent-aros-nexus-architecture.md) — why AROS remains the primary runtime and Nexus becomes the small executive beneath it.
+5. [Convergence Risks](CONVERGENCE_RISKS.md) — red-team risk register, trust ratchet and bridgeability failure modes.
 5. [Trust and Fault Model](TRUST_MODEL.md) — what Nexus protects and the explicit isolation levels.
 6. [Legacy Privilege Model](LEGACY_PRIVILEGE_MODEL.md) — how Supervisor, Disable/Enable and machine privilege must change at the Cell boundary.
 7. [Nexus / Exec Split](NEXUS_EXEC_SPLIT.md) — why current kernel.resource is an extraction seam rather than the final Nexus API.
