@@ -5,7 +5,7 @@ GitHub Issues are the source of truth for task-level progress. This file is the 
 ## Architecture refinement
 
 ### ADR-0002 — Convergent AROS / Nexus architecture
-Status: **formalized on feature branch; three-pass review pending**
+Status: **formalized; three-pass review complete; PR #19 ready for merge**
 Issue: #18
 
 Core documents:
