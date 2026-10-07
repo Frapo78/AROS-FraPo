@@ -17,6 +17,11 @@ This is **not an official AROS roadmap** and it is not an attempt to turn AROS i
 
 Development happens primarily on `nexus/main` and `nexus/bootstrap-x86_64`. The fork's `master` branch is intended to stay close to upstream AROS.
 
+**Project direction:** Francesco Poltero  
+**Contact:** info@francescopoltero.com
+
+See [Nexus Governance](docs/nexus/GOVERNANCE.md) and the [mandatory review protocol](docs/nexus/REVIEW_PROTOCOL.md).
+
 ---
 
 [![AROS Logo](http://aros.org/images/toplogo.png?v=1.0)](http://developers.aros.org)
