@@ -1,48 +1,47 @@
 # Nexus Tasks
 
-GitHub Issues are currently disabled for this repository, so Phase 0 tracking lives here until issue tracking is enabled.
+GitHub Issues are enabled. This file is now the high-level status index; detailed work is tracked in repository issues.
 
 ## Phase 0 — Baseline and guardrails
 
+Parent: #1
+
 ### P0.1 — x86-64 boot map
 Status: **draft complete**
+Issue: #2
 
 Deliverable: `docs/nexus/X86_64_BOOT_MAP.md`
 
-Trace loader/bootstrap, MMU/page tables, kernel.resource, Exec, DOS, graphics/Intuition and Wanderer.
-
 ### P0.2 — Reproducible QEMU baseline
 Status: **todo**
-
-Document exact target, configure/build commands, boot artefacts, QEMU invocation and success markers.
+Issue: #3
 
 ### P0.3 — Privileged-operation inventory
 Status: **todo**
-
-Inventory CR3/page tables, APIC/IOAPIC, privileged instructions, physical mappings, PCI, DMA, timers and reboot/power paths.
+Issue: #4
 
 ### P0.4 — Regression/test inventory
 Status: **todo**
-
-Identify tests that protect ABI v1 behaviour and the low-level paths Nexus will touch.
+Issue: #5
 
 ### P0.5 — Baseline diagnostics
 Status: **todo**
-
-Capture reference serial/debug boot logs and lightweight boot/performance metrics.
+Issue: #6
 
 ## Phase 1 preparation
 
-### P1.1 — Internal Nexus object model
-Status: **blocked by Phase 0**
+### P1.1 — Internal NexusAddressSpace abstraction
+Status: **queued**
+Issue: #7
 
-Specify internal interfaces for AddressSpace, MemoryObject, Thread, Endpoint and Capability.
-
-### P1.2 — Protected payload experiment
+### P1.2 — Second protected x86-64 address space
 Status: **blocked by P1.1**
+Issue: #8
 
-Run two isolated x86-64 payloads with explicit IPC and a shared MemoryObject.
+### P1.3 — Protected IPC + shared MemoryObject proof
+Status: **blocked by P1.2**
+Issue: #9
 
 ## Tracking rule
 
-When GitHub Issues are enabled, migrate each task into an issue while keeping this file as the high-level status index.
+Use GitHub Issues as the source of truth for task-level progress. Keep this file concise and update it only when phase-level status changes.
