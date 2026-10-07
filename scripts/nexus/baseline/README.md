@@ -197,6 +197,59 @@ scripts/nexus/baseline/run-qemu-x86_64.sh /path/to/artifact.iso
 
 Timeout/failure remains unverified and returns non-zero.
 
+## Bounded serial-marker mode
+
+For unattended QEMU evidence, the runner can wait for one exact serial marker:
+
+```sh
+NEXUS_QEMU_MODE=headless \
+NEXUS_QEMU_EXPECT_MARKER='AROS64 - The AROS Research OS' \
+NEXUS_QEMU_TIMEOUT_SECONDS=60 \
+scripts/nexus/baseline/run-qemu-x86_64.sh /path/to/artifact.iso
+```
+
+Marker mode:
+
+- validates the same G1 build provenance first;
+- starts QEMU once;
+- polls the captured serial log;
+- exits as soon as the requested marker is observed;
+- records `FINAL_STATUS=marker-reached`;
+- records `MARKER_REACHED_FINAL=yes`;
+- returns exit 124 on marker timeout;
+- fails if QEMU exits before the marker.
+
+A marker proves **only that named checkpoint**.
+
+The initial CI marker:
+
+`AROS64 - The AROS Research OS`
+
+is the existing upstream x86-64 kernel banner. It is classified as G2a early-kernel evidence and does not imply Exec, DOS, Wanderer, SMP or isolation success.
+
+## GitHub Actions usage
+
+The resource-aware workflow is:
+
+`.github/workflows/nexus-qemu.yml`
+
+It deliberately does not run on every push or every PR update.
+
+Normal automatic PR execution is restricted to relevant low-level paths and selected PR lifecycle events. Explicit reruns use `workflow_dispatch`.
+
+The workflow:
+
+- uses one vCPU and TCG;
+- uses a hard job timeout and marker timeout;
+- cancels obsolete runs for the same PR/ref;
+- stops QEMU immediately when the required marker is found;
+- uploads only short-lived logs/manifests;
+- does not upload the ISO by default.
+
+The policy itself is tested by:
+
+`scripts/nexus/verify-qemu-policy.sh --selftest`
+
 ## Wanderer verification
 
 The QEMU runner never records boot success.
@@ -246,6 +299,9 @@ It checks at least:
 - verification overwrite rejection;
 - duplicate manifest-key rejection;
 - inconsistent final-state rejection;
+- marker-found success;
+- marker-timeout failure;
+- QEMU-exit-before-marker failure;
 - tampered ISO rejection.
 
 `Nexus project sanity` runs both `bash -n` and this self-test.
