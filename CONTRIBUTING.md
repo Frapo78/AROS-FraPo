@@ -29,7 +29,8 @@ Nexus should not maintain a private copy of a generally useful AROS fix without 
 
 ## Before coding
 
-For non-trivial Nexus changes:
+For non-trivial Nexus changes, the mandatory process in `docs/nexus/REVIEW_PROTOCOL.md` applies.
+
 
 1. read `docs/nexus/VISION.md`;
 2. read the relevant architecture documents and ADRs;
@@ -39,6 +40,8 @@ For non-trivial Nexus changes:
 Use GitHub Discussions for broad design conversations and Issues for work that can be completed and tested.
 
 ## Pull request rules
+
+A Nexus pull request may not be considered ready until three distinct review passes have been documented: correctness/scope, regression/integration, and adversarial red-team.
 
 A Nexus pull request should:
 
