@@ -51,7 +51,7 @@ Document:
 - `ADDRESS_SPACE_MODEL.md`
 
 ### P0.9 — Nexus CI and QEMU implementation gate
-Status: **todo**
+Status: **G0 repository sanity active; G1/G2 build and QEMU gates pending**
 Issue: #15
 
 ## Phase 1 preparation
