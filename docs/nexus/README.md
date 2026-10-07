@@ -15,35 +15,33 @@ Nexus is not an attempt to replace AROS with a Unix-like system. It is an attemp
 If you are new to the project, read these in order:
 
 1. [Vision](VISION.md) — why Nexus exists, what it wants to preserve, and the long-term goal.
-2. [Architecture](ARCHITECTURE.md) — the two-domain model and the technical invariants.
-3. [Trust and Fault Model](TRUST_MODEL.md) — what Nexus protects and the explicit isolation levels.
-4. [Legacy Privilege Model](LEGACY_PRIVILEGE_MODEL.md) — how Supervisor, Disable/Enable and machine privilege must change at the Cell boundary.
-5. [Nexus / Exec Split](NEXUS_EXEC_SPLIT.md) — why current kernel.resource is an extraction seam rather than the final Nexus API.
-6. [Address-Space Model](ADDRESS_SPACE_MODEL.md) — the first implementation primitive, including NX/W^X, CR3, faults and SMP TLB rules.
-7. [Roadmap](ROADMAP.md) — how the work is divided into demonstrable phases.
-8. [Baseline](BASELINE.md) — the exact upstream reference state and synchronization policy.
-9. [x86-64 Boot Map](X86_64_BOOT_MAP.md) — where the current AROS boot path gives us practical insertion points.
-10. [Bootstrap MVP](BOOTSTRAP_MVP.md) — the first implementation proof.
-11. [ABI v1 Compatibility Contract](ABI_V1_COMPAT.md) — what Nexus must not casually break.
-12. [ADR-0001](adr/0001-two-domain-architecture.md) — why the two-domain decision exists.
-13. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
-14. [CI and validation](CI_STRATEGY.md) — staged build, QEMU and hardware gates.
-15. [Review Protocol](REVIEW_PROTOCOL.md) — mandatory three-pass review and red-team process.
-16. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
-17. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
-18. [Tasks](TASKS.md) — current phase status and issue links.
+2. [Architecture](ARCHITECTURE.md) — the convergent AROS/Nexus model and technical invariants.
+3. [Convergent Architecture](CONVERGENT_ARCHITECTURE.md) — the detailed three-plane model, U/A/N ownership, service fabric and evolution rules.
+4. [ADR-0002](adr/0002-convergent-aros-nexus-architecture.md) — why AROS remains the primary runtime and Nexus becomes the small executive beneath it.
+5. [Trust and Fault Model](TRUST_MODEL.md) — what Nexus protects and the explicit isolation levels.
+6. [Legacy Privilege Model](LEGACY_PRIVILEGE_MODEL.md) — how Supervisor, Disable/Enable and machine privilege must change at the Cell boundary.
+7. [Nexus / Exec Split](NEXUS_EXEC_SPLIT.md) — why current kernel.resource is an extraction seam rather than the final Nexus API.
+8. [Address-Space Model](ADDRESS_SPACE_MODEL.md) — the first implementation primitive, including NX/W^X, CR3, faults and SMP TLB rules.
+9. [Roadmap](ROADMAP.md) — how the work is divided into demonstrable phases.
+10. [Baseline](BASELINE.md) — the exact upstream reference state and synchronization policy.
+11. [x86-64 Boot Map](X86_64_BOOT_MAP.md) — where the current AROS boot path gives us practical insertion points.
+12. [Bootstrap MVP](BOOTSTRAP_MVP.md) — the first implementation proof.
+13. [ABI v1 Compatibility Contract](ABI_V1_COMPAT.md) — what Nexus must not casually break.
+14. [ADR-0001](adr/0001-two-domain-architecture.md) — why the two-domain decision exists.
+15. [Upstream Integration](UPSTREAM_INTEGRATION.md) — U/A/N ownership and continuous upstream intake.
+16. [AI and Automation Foundations](AI_FOUNDATIONS.md) — future-ready service/capability foundations without putting AI in the kernel.
+17. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
+18. [CI and validation](CI_STRATEGY.md) — staged build, QEMU and hardware gates.
+19. [Review Protocol](REVIEW_PROTOCOL.md) — mandatory three-pass review and red-team process.
+20. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
+21. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
+22. [Tasks](TASKS.md) — current phase status and issue links.
 
 ## The idea in one paragraph
 
-Classic Amiga/AROS software assumes a shared-pointer world. Modern protection requires isolated address spaces. Those two contracts cannot both be true everywhere at once.
+AROS remains the primary operating-system runtime. Nexus progressively extracts the small set of privileged machine mechanisms that need modern protection: address spaces, low-level threads, memory objects, capabilities, IRQ/timer ownership, device authority, DMA/IOMMU and fault domains.
 
-Nexus therefore separates them:
-
-- a **Legacy Domain** preserves ABI v1 semantics inside one or more Legacy Cells;
-- a **Protected Domain** runs new software and system services with isolated address spaces, capabilities and explicit shared memory;
-- both domains remain part of one AROS system and one desktop.
-
-The cost of translation is paid at protection boundaries, not inside every legacy operation.
+Legacy shared-pointer semantics may continue inside ordinary AROS compatibility scope. Protected boundaries are introduced selectively where they provide real value. Legacy Cells remain available as a containment tool, not as the mandatory home of the whole AROS runtime.
 
 ## What Nexus is trying to preserve
 
@@ -60,7 +58,7 @@ Nexus explicitly values:
 - low conceptual overhead;
 - fast startup and responsiveness.
 
-The protected ABI should feel like an evolution of those ideas, not a Unix API wearing Amiga colours.
+Protected AROS capabilities should evolve those ideas rather than create a parallel Unix-like or ExecNG ecosystem.
 
 ## What Nexus is trying to add
 
@@ -130,7 +128,7 @@ See [REVIEW_PROTOCOL.md](REVIEW_PROTOCOL.md) and [CI_STRATEGY.md](CI_STRATEGY.md
 
 - `master` — kept close to upstream AROS for synchronisation.
 - `nexus/main` — primary Nexus architecture branch.
-- `nexus/bootstrap-x86_64` — first implementation/prototyping branch.
+- `nexus/bootstrap-x86_64` — historical/bootstrap prototyping line; new substantial work should use focused feature branches from `nexus/main`.
 
 ## Relationship with upstream
 
@@ -150,10 +148,10 @@ The intended relationship with the AROS community is constructive:
 
 ## Project rule
 
-> **Nexus modernizes the execution boundary, not the identity of AROS.**
+> **AROS remains the system. Nexus modernizes the machine mechanisms beneath it.**
 
-Compatibility belongs inside the Legacy Domain.
+Compatibility remains an AROS contract.
 
-Protection belongs outside it.
+Protection is introduced at explicit boundaries.
 
-The long-term goal is to let both exist strongly, rather than weakening both through compromise.
+The long-term goal is convergence: upstream AROS improvements should flow naturally into Nexus, while Nexus gives AROS stronger low-level capabilities.
