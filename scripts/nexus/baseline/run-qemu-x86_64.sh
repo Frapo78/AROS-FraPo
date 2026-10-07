@@ -2,8 +2,9 @@
 #
 # Run a Nexus x86-64 baseline ISO under a conservative QEMU configuration.
 #
-# A QEMU launch is evidence of launch only. This script never claims that AROS
-# reached Wanderer.
+# A QEMU launch is evidence of launch only. Optional marker mode can prove one
+# explicitly named serial checkpoint, but never promotes that checkpoint into a
+# broader boot or isolation claim.
 #
 set -euo pipefail
 
@@ -42,6 +43,41 @@ manifest_value()
         }
     ' "$manifest_file"
 }
+
+qemu_pid=""
+
+stop_qemu()
+{
+    pid="${1:-}"
+    [ -n "$pid" ] || return 0
+
+    if kill -0 "$pid" 2>/dev/null; then
+        kill -TERM "$pid" 2>/dev/null || true
+
+        i=0
+        while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 5 ]; do
+            sleep 1
+            i=$((i + 1))
+        done
+
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
+    fi
+
+    wait "$pid" 2>/dev/null || true
+}
+
+cleanup()
+{
+    if [ -n "$qemu_pid" ]; then
+        stop_qemu "$qemu_pid"
+        qemu_pid=""
+    fi
+}
+
+trap cleanup EXIT
+trap 'cleanup; exit 130' INT TERM
 
 if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
     printf 'usage: %s <aros-pc-x86_64.iso> [result-directory]\n' "$0" >&2
@@ -112,13 +148,29 @@ esac
 [ "$memory_mib" -gt 0 ] || die "memory must be greater than zero"
 [ "$cpus" -gt 0 ] || die "CPU count must be greater than zero"
 
+expected_marker="${NEXUS_QEMU_EXPECT_MARKER:-}"
+if [ -n "$expected_marker" ]; then
+    case "$expected_marker" in
+        *$'\n'*|*$'\r'*) die "NEXUS_QEMU_EXPECT_MARKER must be a single line" ;;
+    esac
+    [ "${#expected_marker}" -le 256 ] ||
+        die "NEXUS_QEMU_EXPECT_MARKER is too long"
+fi
+
 timeout_seconds="${NEXUS_QEMU_TIMEOUT_SECONDS:-}"
+if [ -n "$expected_marker" ] && [ -z "$timeout_seconds" ]; then
+    timeout_seconds=60
+fi
+
 if [ -n "$timeout_seconds" ]; then
     case "$timeout_seconds" in
         *[!0-9]*) die "NEXUS_QEMU_TIMEOUT_SECONDS must be a positive integer" ;;
     esac
     [ "$timeout_seconds" -gt 0 ] ||
         die "NEXUS_QEMU_TIMEOUT_SECONDS must be greater than zero"
+fi
+
+if [ -z "$expected_marker" ] && [ -n "$timeout_seconds" ]; then
     command -v timeout >/dev/null 2>&1 ||
         die "timeout command is required when NEXUS_QEMU_TIMEOUT_SECONDS is set"
 fi
@@ -180,39 +232,106 @@ fi
     printf 'NETWORK=none\n'
     printf 'SERIAL_LOG=%s\n' "$serial_log"
     printf 'WANDERER_VERIFICATION=unverified\n'
+    if [ -n "$expected_marker" ]; then
+        printf 'EXPECTED_MARKER=%s\n' "$expected_marker"
+        printf 'MARKER_REACHED=no\n'
+    fi
     printf 'QEMU_ARGS='
     printf '%q ' "${qemu_args[@]}"
     printf '\n'
 } > "$manifest"
 
-printf 'Starting QEMU. Close the VM after the observation is complete.\n'
-printf 'This run remains UNVERIFIED until a separate verification is recorded.\n'
+printf 'Starting QEMU.\n'
+if [ -n "$expected_marker" ]; then
+    printf 'Waiting up to %s seconds for serial marker: %s\n' "$timeout_seconds" "$expected_marker"
+else
+    printf 'This run remains UNVERIFIED until a separate verification is recorded.\n'
+fi
 printf 'Run directory: %s\n' "$result_dir"
 
-set +e
-if [ -n "$timeout_seconds" ]; then
-    timeout --signal=TERM "$timeout_seconds" "$qemu_path" "${qemu_args[@]}"
-    rc=$?
+rc=0
+final_status=""
+marker_reached=no
+
+if [ -n "$expected_marker" ]; then
+    "$qemu_path" "${qemu_args[@]}" &
+    qemu_pid=$!
+    deadline=$((SECONDS + timeout_seconds))
+
+    while kill -0 "$qemu_pid" 2>/dev/null; do
+        if [ -f "$serial_log" ] && grep -Fq -- "$expected_marker" "$serial_log"; then
+            marker_reached=yes
+            final_status=marker-reached
+            rc=0
+            break
+        fi
+
+        if [ "$SECONDS" -ge "$deadline" ]; then
+            final_status=marker-timeout
+            rc=124
+            break
+        fi
+
+        sleep 1
+    done
+
+    if [ "$marker_reached" = yes ]; then
+        stop_qemu "$qemu_pid"
+        qemu_pid=""
+    elif kill -0 "$qemu_pid" 2>/dev/null; then
+        stop_qemu "$qemu_pid"
+        qemu_pid=""
+    else
+        set +e
+        wait "$qemu_pid"
+        qemu_rc=$?
+        set -e
+        qemu_pid=""
+
+        if [ -f "$serial_log" ] && grep -Fq -- "$expected_marker" "$serial_log"; then
+            marker_reached=yes
+            final_status=marker-reached
+            rc=0
+        else
+            final_status=qemu-exited-before-marker
+            rc="$qemu_rc"
+            [ "$rc" -ne 0 ] || rc=1
+        fi
+    fi
 else
-    "$qemu_path" "${qemu_args[@]}"
-    rc=$?
+    set +e
+    if [ -n "$timeout_seconds" ]; then
+        timeout --signal=TERM "$timeout_seconds" "$qemu_path" "${qemu_args[@]}"
+        rc=$?
+    else
+        "$qemu_path" "${qemu_args[@]}"
+        rc=$?
+    fi
+    set -e
+
+    if [ "$rc" -eq 0 ]; then
+        final_status=vm-exited-unverified
+    elif [ "$rc" -eq 124 ]; then
+        final_status=timeout-unverified
+    else
+        final_status=qemu-error-unverified
+    fi
 fi
-set -e
 
 {
     printf 'QEMU_EXIT_CODE=%s\n' "$rc"
     printf 'FINISHED_UTC=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-
-    if [ "$rc" -eq 0 ]; then
-        printf 'FINAL_STATUS=vm-exited-unverified\n'
-    elif [ "$rc" -eq 124 ]; then
-        printf 'FINAL_STATUS=timeout-unverified\n'
-    else
-        printf 'FINAL_STATUS=qemu-error-unverified\n'
+    if [ -n "$expected_marker" ]; then
+        printf 'MARKER_REACHED_FINAL=%s\n' "$marker_reached"
     fi
+    printf 'FINAL_STATUS=%s\n' "$final_status"
 } >> "$manifest"
 
-printf 'QEMU exited with code %s. No Wanderer success claim has been made.\n' "$rc"
+if [ "$final_status" = marker-reached ]; then
+    printf 'QEMU marker reached: %s\n' "$expected_marker"
+else
+    printf 'QEMU finished with status %s (exit %s).\n' "$final_status" "$rc"
+fi
 printf 'Manifest: %s\n' "$manifest"
 
 exit "$rc"
