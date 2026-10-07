@@ -170,6 +170,18 @@ The checker verifies that the process still contains:
 - negative criteria;
 - human/hardware PR gate.
 
+### Finding R3-F1 — the checker itself drifted from canonical policy text
+
+The first CI execution failed because the checker expected a wording variant for the E6 evidence level that no longer matched the canonical `VERIFICATION_MODEL.md`.
+
+This was a useful failure: the process validator itself is part of the system under test.
+
+### Correction
+
+The checker was aligned to the canonical policy text and CI was repeated.
+
+The runner also reported that the pinned `actions/checkout@v4` used a deprecated Node runtime. The workflow was updated to a reviewed/pinned v5 commit instead of ignoring the warning.
+
 ### Evidence class
 
 **E2 — focused executable negative test** for the process/tooling contract.
@@ -189,7 +201,11 @@ It proves specific process regressions are mechanically detectable.
 
 ### Review 3 result
 
-**PASS**, contingent on final PR-head CI executing the adversarial self-test successfully.
+**PASS.**
+
+The adversarial self-test completed successfully on the corrected PR head.
+
+The final integration still requires all ordinary repository checks to be green.
 
 ## Decision
 
