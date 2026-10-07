@@ -66,7 +66,7 @@ build_manifest="$artifact_dir/build-manifest.txt"
 cat > "$build_manifest" <<EOF
 FORMAT=nexus-baseline-v0
 SOURCE_SHA=selftest-source
-PROFILE=compat
+PROFILE=diagnostic
 TOOLCHAIN_INPUT_KEY=selftest-toolchain
 ARTIFACT=$iso
 ARTIFACT_SHA256=$iso_sha256
@@ -84,6 +84,23 @@ if [ "${1:-}" = "--version" ]; then
     exit 0
 fi
 
+serial_path=""
+previous=""
+for arg in "$@"; do
+    if [ "$previous" = "-serial" ]; then
+        case "$arg" in
+            file:*) serial_path="${arg#file:}" ;;
+        esac
+    fi
+    previous="$arg"
+done
+
+if [ -n "${FAKE_QEMU_WRITE_MARKER:-}" ] && [ -n "$serial_path" ]; then
+    mkdir -p "$(dirname -- "$serial_path")"
+    printf '%s\n' "$FAKE_QEMU_WRITE_MARKER" >> "$serial_path"
+fi
+
+sleep "${FAKE_QEMU_SLEEP_SECONDS:-0}"
 exit "${FAKE_QEMU_EXIT:-0}"
 EOF
 chmod +x "$fake_qemu"
@@ -95,6 +112,7 @@ expect_fail "ISO without G1 build manifest" \
     env NEXUS_QEMU_BINARY="$fake_qemu" \
     "$runner" "$orphan_iso" "$tmp/run-orphan"
 
+# Normal interactive run remains unverified until a separate manual record exists.
 interactive="$tmp/run-interactive"
 env NEXUS_QEMU_BINARY="$fake_qemu" \
     NEXUS_QEMU_MODE=interactive \
@@ -120,6 +138,7 @@ grep -q '^RUN_MANIFEST_SHA256=' "$interactive/wanderer-verification.txt" ||
 expect_fail "verification overwrite" \
     "$recorder" "$interactive" pass "duplicate verification must fail"
 
+# A headless non-marker run may not be manually promoted to Wanderer success.
 headless="$tmp/run-headless"
 env NEXUS_QEMU_BINARY="$fake_qemu" \
     NEXUS_QEMU_MODE=headless \
@@ -130,6 +149,7 @@ expect_fail "headless manual Wanderer pass" \
 
 "$recorder" "$headless" fail "headless is not Wanderer proof" >/dev/null
 
+# QEMU errors must not be promoted to success.
 failed="$tmp/run-qemu-error"
 set +e
 FAKE_QEMU_EXIT=42 \
@@ -157,12 +177,65 @@ expect_fail "duplicate run-manifest key" \
 
 bad_status="$tmp/run-bad-status"
 mkdir "$bad_status"
-cp "$interactive/run-manifest.txt" "$bad_status/run-manifest.txt"
 sed 's/^FINAL_STATUS=.*/FINAL_STATUS=qemu-error-unverified/' \
     "$interactive/run-manifest.txt" > "$bad_status/run-manifest.txt"
 
 expect_fail "inconsistent QEMU final status" \
     "$recorder" "$bad_status" pass "bad status must fail"
+
+# Marker mode: a precise serial checkpoint is a separate, bounded claim.
+marker='AROS64 - The AROS Research OS'
+marker_ok="$tmp/run-marker-ok"
+env \
+    FAKE_QEMU_WRITE_MARKER="$marker" \
+    FAKE_QEMU_SLEEP_SECONDS=10 \
+    NEXUS_QEMU_BINARY="$fake_qemu" \
+    NEXUS_QEMU_MODE=headless \
+    NEXUS_QEMU_EXPECT_MARKER="$marker" \
+    NEXUS_QEMU_TIMEOUT_SECONDS=4 \
+    "$runner" "$iso" "$marker_ok" >/dev/null
+
+grep -q '^FINAL_STATUS=marker-reached$' "$marker_ok/run-manifest.txt" ||
+    fail "marker run did not record marker-reached"
+grep -q '^MARKER_REACHED_FINAL=yes$' "$marker_ok/run-manifest.txt" ||
+    fail "marker run did not record marker success"
+grep -Fq -- "$marker" "$marker_ok/serial.log" ||
+    fail "expected marker is missing from serial evidence"
+
+# Marker timeout must fail with exit 124 and a distinct state.
+marker_timeout="$tmp/run-marker-timeout"
+set +e
+FAKE_QEMU_SLEEP_SECONDS=10 \
+NEXUS_QEMU_BINARY="$fake_qemu" \
+NEXUS_QEMU_MODE=headless \
+NEXUS_QEMU_EXPECT_MARKER="$marker" \
+NEXUS_QEMU_TIMEOUT_SECONDS=1 \
+    "$runner" "$iso" "$marker_timeout" >/dev/null 2>&1
+marker_timeout_rc=$?
+set -e
+
+[ "$marker_timeout_rc" -eq 124 ] ||
+    fail "expected marker timeout exit 124, got $marker_timeout_rc"
+grep -q '^FINAL_STATUS=marker-timeout$' "$marker_timeout/run-manifest.txt" ||
+    fail "marker timeout did not record marker-timeout"
+grep -q '^MARKER_REACHED_FINAL=no$' "$marker_timeout/run-manifest.txt" ||
+    fail "marker timeout incorrectly recorded marker success"
+
+# QEMU exiting before the marker must fail even if QEMU itself exits zero.
+marker_early_exit="$tmp/run-marker-early-exit"
+set +e
+NEXUS_QEMU_BINARY="$fake_qemu" \
+NEXUS_QEMU_MODE=headless \
+NEXUS_QEMU_EXPECT_MARKER="$marker" \
+NEXUS_QEMU_TIMEOUT_SECONDS=4 \
+    "$runner" "$iso" "$marker_early_exit" >/dev/null 2>&1
+marker_early_rc=$?
+set -e
+
+[ "$marker_early_rc" -ne 0 ] ||
+    fail "QEMU early exit without marker was accepted"
+grep -q '^FINAL_STATUS=qemu-exited-before-marker$' "$marker_early_exit/run-manifest.txt" ||
+    fail "early exit did not record qemu-exited-before-marker"
 
 # The ISO must remain byte-identical to the artifact bound by G1 evidence.
 printf 'tampered\n' >> "$iso"
