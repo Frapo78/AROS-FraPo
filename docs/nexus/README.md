@@ -30,7 +30,8 @@ If you are new to the project, read these in order:
 14. [CI and validation](CI_STRATEGY.md) — staged build, QEMU and hardware gates.
 15. [Review Protocol](REVIEW_PROTOCOL.md) — mandatory three-pass review and red-team process.
 16. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
-17. [Tasks](TASKS.md) — current phase status and issue links.
+17. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
+18. [Tasks](TASKS.md) — current phase status and issue links.
 
 ## The idea in one paragraph
 
