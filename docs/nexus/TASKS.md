@@ -5,7 +5,7 @@ GitHub Issues are the source of truth for task-level progress. This file is the 
 ## Architecture refinement
 
 ### ADR-0002 — Convergent AROS / Nexus architecture
-Status: **formalized; three-pass review complete; integration tracked in PR #19**
+Status: **formalized and integrated in `nexus/main`; three-pass review complete**
 Issue: #18
 
 Core documents:
@@ -27,7 +27,7 @@ Issue: #2
 Deliverable: `docs/nexus/X86_64_BOOT_MAP.md`
 
 ### P0.2 — Reproducible QEMU baseline
-Status: **todo**
+Status: **baseline harness v0 reviewed; real G1 build and G2 QEMU execution pending**
 Issue: #3
 
 ### P0.3 — Privileged-operation inventory
@@ -65,7 +65,7 @@ Document:
 - `ADDRESS_SPACE_MODEL.md`
 
 ### P0.9 — Nexus CI and QEMU implementation gate
-Status: **G0 repository sanity active; G1/G2 build and QEMU gates pending**
+Status: **G0 + baseline harness syntax/behaviour checks active; real G1/G2 execution pending**
 Issue: #15
 
 ## Phase 1 preparation
