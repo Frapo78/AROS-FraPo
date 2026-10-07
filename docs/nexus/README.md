@@ -21,7 +21,8 @@ If you are new to the project, read these in order:
 5. [Bootstrap MVP](BOOTSTRAP_MVP.md) — the first implementation proof.
 6. [ABI v1 Compatibility Contract](ABI_V1_COMPAT.md) — what Nexus must not casually break.
 7. [ADR-0001](adr/0001-two-domain-architecture.md) — why the two-domain decision exists.
-8. [Tasks](TASKS.md) — current phase status and issue links.
+8. [Community and participation](COMMUNITY.md) — how to discuss, review and contribute.
+9. [Tasks](TASKS.md) — current phase status and issue links.
 
 ## The idea in one paragraph
 
