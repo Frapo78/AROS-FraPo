@@ -55,6 +55,7 @@ else
     stamp="$(date -u '+%Y%m%dT%H%M%SZ')"
     result_dir="$(dirname -- "$iso")/qemu-$stamp"
 fi
+[ ! -e "$result_dir" ] || die "result path already exists: $result_dir"
 mkdir -p "$result_dir"
 result_dir="$(cd -- "$result_dir" && pwd)"
 
