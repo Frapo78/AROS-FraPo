@@ -37,7 +37,6 @@ jobs:
     env:
       BUILDTHREADS: '2'
       NEXUS_PROFILE: diagnostic
-      NEXUS_WORK_ROOT: ${{ runner.temp }}/nexus-qemu
       NEXUS_QEMU_MODE: headless
       NEXUS_QEMU_MEMORY_MIB: '1024'
       NEXUS_QEMU_CPUS: '1'
@@ -87,6 +86,8 @@ jobs:
       - name: Build diagnostic x86-64 baseline artifact
         id: build
         shell: bash
+        env:
+          NEXUS_WORK_ROOT: ${{ runner.temp }}/nexus-qemu
         run: |
           set -euo pipefail
           build_log="$RUNNER_TEMP/nexus-build.log"
