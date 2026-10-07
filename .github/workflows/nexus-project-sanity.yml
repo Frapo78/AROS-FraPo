@@ -128,9 +128,7 @@ jobs:
 
       - name: Run Nexus baseline harness self-test
         shell: bash
-        run: |
-          set -euo pipefail
-          scripts/nexus/baseline/selftest.sh
+        run: scripts/nexus/baseline/selftest.sh
 
       - name: Check Nexus process references
         shell: bash

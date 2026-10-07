@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# Build a reproducible Nexus x86-64 baseline using the AROS upstream stage
-# driver. This script intentionally wraps, rather than duplicates, the AROS
-# build system.
+# Nexus x86-64 baseline build harness.
+#
+# This deliberately wraps the upstream AROS stage driver. It does not replace
+# the AROS build system and does not claim bit-for-bit reproducible output.
 #
 set -euo pipefail
 
@@ -39,7 +40,12 @@ sha256_text()
     fi
 }
 
-for cmd in git make awk bash; do
+first_version_line()
+{
+    "$1" --version 2>&1 | sed -n '1p' | tr '\r\n' '  '
+}
+
+for cmd in git make awk bash python3 cc c++; do
     need "$cmd"
 done
 
@@ -61,17 +67,31 @@ case "$profile" in
 esac
 
 source_sha="$(git -C "$repo_root" rev-parse HEAD)"
-if [ -n "$(git -C "$repo_root" status --porcelain --untracked-files=normal)" ]; then
-    die "source tree is dirty; baseline evidence requires a clean Git worktree"
-fi
 source_dirty=no
+if [ -n "$(git -C "$repo_root" status --porcelain --untracked-files=normal)" ]; then
+    source_dirty=yes
+fi
+
+if [ "$source_dirty" = yes ] && [ "${NEXUS_ALLOW_DIRTY:-0}" != 1 ]; then
+    die "source tree is dirty; commit/stash changes or set NEXUS_ALLOW_DIRTY=1"
+fi
 
 source_gcc_default="$(tr -d '\r\n' < "$repo_root/config/gcc_def")"
 source_binutils_default="$(tr -d '\r\n' < "$repo_root/config/binutils_def")"
 gcc_version="${NEXUS_GCC_VERSION:-$source_gcc_default}"
 binutils_version="${NEXUS_BINUTILS_VERSION:-$source_binutils_default}"
 
-work_root="${NEXUS_WORK_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/aros-nexus/baseline}"
+if [ -n "${NEXUS_WORK_ROOT:-}" ]; then
+    work_root="$NEXUS_WORK_ROOT"
+else
+    [ -n "${HOME:-}" ] || die "HOME is unset; set NEXUS_WORK_ROOT explicitly"
+    work_root="${XDG_CACHE_HOME:-$HOME/.cache}/aros-nexus/baseline"
+fi
+
+host_os="$(uname -s)"
+host_arch="$(uname -m)"
+host_cc_version="$(first_version_line cc)"
+host_cxx_version="$(first_version_line c++)"
 
 crosstools_tree="$(git -C "$repo_root" rev-parse HEAD:tools/crosstools)"
 collect_tree="$(git -C "$repo_root" rev-parse HEAD:tools/collect-aros)"
@@ -79,25 +99,21 @@ stage_driver_blob="$(git -C "$repo_root" rev-parse HEAD:scripts/azure/aros-stage
 configure_blob="$(git -C "$repo_root" rev-parse HEAD:configure)"
 
 toolchain_input_key="$(
-    printf '%s\n' \
-        "$source_sha" \
-        "$target" \
-        "$gcc_version" \
-        "$binutils_version" \
-        "$crosstools_tree" \
-        "$collect_tree" \
-        "$stage_driver_blob" \
-        "$configure_blob" |
+    printf '%s\n'         "$host_os"         "$host_arch"         "$target"         "$gcc_version"         "$binutils_version"         "$crosstools_tree"         "$collect_tree"         "$stage_driver_blob"         "$configure_blob" |
         sha256_text
 )"
 
 source_key="$source_sha"
-attempt_id="$(date -u '+%Y%m%dT%H%M%SZ')-$"
+if [ "$source_dirty" = yes ]; then
+    source_key="$source_sha-dirty"
+fi
+
+attempt_id="$(date -u '+%Y%m%dT%H%M%SZ')-$$"
 run_root="$work_root/runs/$source_key/$profile/$attempt_id"
 build_dir="$run_root/build"
 toolchain_dir="$run_root/toolchain"
-ports_dir="$run_root/portssources"
 artifact_dir="$run_root/artifacts"
+ports_dir="$work_root/portssources"
 
 if [ -n "${BUILDTHREADS:-}" ]; then
     jobs="$BUILDTHREADS"
@@ -114,30 +130,12 @@ case "$jobs" in
     0) die "BUILDTHREADS must be greater than zero" ;;
 esac
 
-mkdir -p "$work_root"
-work_root="$(cd -- "$work_root" && pwd -P)"
-
-case "$work_root/" in
-    "$repo_root/"*)
-        die "NEXUS_WORK_ROOT must be outside the Git worktree"
-        ;;
-esac
-
-run_root="$work_root/runs/$source_key/$profile/$attempt_id"
-build_dir="$run_root/build"
-toolchain_dir="$run_root/toolchain"
-ports_dir="$run_root/portssources"
-artifact_dir="$run_root/artifacts"
-
 [ ! -e "$run_root" ] || die "run path already exists: $run_root"
-mkdir -p "$build_dir" "$toolchain_dir" "$ports_dir" "$artifact_dir"
+mkdir -p "$build_dir" "$toolchain_dir" "$artifact_dir" "$ports_dir"
 
 manifest="$artifact_dir/build-manifest.txt"
-submodule_manifest="$artifact_dir/submodules.txt"
 iso_out="$artifact_dir/aros-pc-x86_64.iso"
 status=failed
-
-git -C "$repo_root" submodule status --recursive > "$submodule_manifest"
 
 finish()
 {
@@ -156,37 +154,33 @@ trap finish EXIT
     printf 'FORMAT=nexus-baseline-v0\n'
     printf 'INITIAL_STATUS=running\n'
     printf 'STARTED_UTC=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    printf 'ATTEMPT_ID=%s\n' "$attempt_id"
     printf 'SOURCE_SHA=%s\n' "$source_sha"
     printf 'SOURCE_DIRTY=%s\n' "$source_dirty"
     printf 'TARGET=%s\n' "$target"
     printf 'PROFILE=%s\n' "$profile"
     printf 'BOOTLOADER=grub2\n'
     printf 'GCC_VERSION=%s\n' "$gcc_version"
-    if [ -n "${NEXUS_GCC_VERSION:-}" ]; then
-        printf 'GCC_VERSION_SOURCE=override\n'
-    else
-        printf 'GCC_VERSION_SOURCE=config/gcc_def\n'
-    fi
+    printf 'GCC_VERSION_SOURCE=%s\n'         "$([ -n "${NEXUS_GCC_VERSION:-}" ] && printf override || printf config/gcc_def)"
     printf 'BINUTILS_VERSION=%s\n' "$binutils_version"
-    if [ -n "${NEXUS_BINUTILS_VERSION:-}" ]; then
-        printf 'BINUTILS_VERSION_SOURCE=override\n'
-    else
-        printf 'BINUTILS_VERSION_SOURCE=config/binutils_def\n'
-    fi
+    printf 'BINUTILS_VERSION_SOURCE=%s\n'         "$([ -n "${NEXUS_BINUTILS_VERSION:-}" ] && printf override || printf config/binutils_def)"
     printf 'CROSSTOOLS_TREE=%s\n' "$crosstools_tree"
     printf 'COLLECT_AROS_TREE=%s\n' "$collect_tree"
     printf 'STAGE_DRIVER_BLOB=%s\n' "$stage_driver_blob"
     printf 'CONFIGURE_BLOB=%s\n' "$configure_blob"
     printf 'TOOLCHAIN_INPUT_KEY=%s\n' "$toolchain_input_key"
-    printf 'ATTEMPT_ID=%s\n' "$attempt_id"
-    printf 'RUN_ROOT=%s\n' "$run_root"
-    printf 'SUBMODULE_MANIFEST=%s\n' "$submodule_manifest"
-    printf 'SUBMODULE_MANIFEST_SHA256=%s\n' "$(sha256_file "$submodule_manifest")"
-    printf 'BUILDTHREADS=%s\n' "$jobs"
-    printf 'CCACHE_DISABLE=1\n'
+    printf 'HOST_OS=%s\n' "$host_os"
+    printf 'HOST_ARCH=%s\n' "$host_arch"
     printf 'HOST_UNAME=%s\n' "$(uname -a | tr '\r\n' '  ')"
+    printf 'HOST_CC_VERSION=%s\n' "$host_cc_version"
+    printf 'HOST_CXX_VERSION=%s\n' "$host_cxx_version"
+    printf 'GIT_VERSION=%s\n' "$(git --version | tr '\r\n' '  ')"
+    printf 'MAKE_VERSION=%s\n' "$(make --version | sed -n '1p' | tr '\r\n' '  ')"
+    printf 'BUILDTHREADS=%s\n' "$jobs"
+    printf 'RUN_ROOT=%s\n' "$run_root"
     printf 'BUILD_DIR=%s\n' "$build_dir"
     printf 'TOOLCHAIN_DIR=%s\n' "$toolchain_dir"
+    printf 'PORTSSOURCES_DIR=%s\n' "$ports_dir"
 } > "$manifest"
 
 configure_args=(
@@ -218,15 +212,23 @@ export AROSBUILDTOOLCHAINDIR="$toolchain_dir"
 export AROSPORTSSRCSDIR="$ports_dir"
 export BUILDTHREADS="$jobs"
 
-# The upstream stage driver enables ccache. Baseline evidence deliberately
-# disables cache reuse so a previous host build cannot satisfy this attempt.
-export CCACHE_DISABLE=1
-
-printf 'Building fresh AROS toolchain for this baseline attempt...\n'
+printf 'Building fresh AROS toolchain for baseline attempt %s...\n' "$attempt_id"
 "$repo_root/scripts/azure/aros-stage.sh" toolchain "${configure_args[@]}"
 
-# The stage driver is upstream-owned. Use it for the core build instead of
-# copying its configure/build policy into Nexus tooling.
+toolchain_cc="$toolchain_dir/bin/x86_64-aros-gcc"
+toolchain_ld="$toolchain_dir/bin/x86_64-aros-ld"
+[ -x "$toolchain_cc" ] || die "expected compiler not found: $toolchain_cc"
+[ -x "$toolchain_ld" ] || die "expected linker not found: $toolchain_ld"
+
+{
+    printf 'TOOLCHAIN_CC=%s\n' "$toolchain_cc"
+    printf 'TOOLCHAIN_CC_SHA256=%s\n' "$(sha256_file "$toolchain_cc")"
+    printf 'TOOLCHAIN_CC_VERSION=%s\n' "$(first_version_line "$toolchain_cc")"
+    printf 'TOOLCHAIN_LD=%s\n' "$toolchain_ld"
+    printf 'TOOLCHAIN_LD_SHA256=%s\n' "$(sha256_file "$toolchain_ld")"
+    printf 'TOOLCHAIN_LD_VERSION=%s\n' "$(first_version_line "$toolchain_ld")"
+} >> "$manifest"
+
 printf 'Building AROS core for %s (%s profile)...\n' "$target" "$profile"
 "$repo_root/scripts/azure/aros-stage.sh" core "${configure_args[@]}"
 

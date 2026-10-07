@@ -26,8 +26,9 @@ sha256_file()
 
 manifest_value()
 {
-    key="$1"
-    awk -F= -v key="$key" '$1 == key { value=$0; sub(/^[^=]*=/, "", value) } END { print value }' "$manifest"
+    local key="$1"
+
+    awk -F= -v key="$key"         '$1 == key { value=$0; sub(/^[^=]*=/, "", value) } END { print value }'         "$manifest"
 }
 
 if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
@@ -88,6 +89,7 @@ fi
     printf 'QEMU_FINAL_STATUS=%s\n' "$final_status"
     printf 'QEMU_EXIT_CODE=%s\n' "$qemu_exit"
     printf 'NOTE=%s\n' "$(printf '%s' "$note" | tr '\r\n' '  ')"
+
     if [ -n "$evidence_abs" ]; then
         printf 'EVIDENCE=%s\n' "$evidence_abs"
         printf 'EVIDENCE_SHA256=%s\n' "$(sha256_file "$evidence_abs")"
