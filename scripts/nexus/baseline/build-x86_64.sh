@@ -61,14 +61,10 @@ case "$profile" in
 esac
 
 source_sha="$(git -C "$repo_root" rev-parse HEAD)"
-source_dirty=no
 if [ -n "$(git -C "$repo_root" status --porcelain --untracked-files=normal)" ]; then
-    source_dirty=yes
+    die "source tree is dirty; baseline evidence requires a clean Git worktree"
 fi
-
-if [ "$source_dirty" = yes ] && [ "${NEXUS_ALLOW_DIRTY:-0}" != 1 ]; then
-    die "source tree is dirty; commit/stash changes or set NEXUS_ALLOW_DIRTY=1"
-fi
+source_dirty=no
 
 source_gcc_default="$(tr -d '\r\n' < "$repo_root/config/gcc_def")"
 source_binutils_default="$(tr -d '\r\n' < "$repo_root/config/binutils_def")"
@@ -96,15 +92,11 @@ toolchain_input_key="$(
 )"
 
 source_key="$source_sha"
-if [ "$source_dirty" = yes ]; then
-    source_key="$source_sha-dirty"
-fi
-
-attempt_id="$(date -u '+%Y%m%dT%H%M%SZ')-$$"
+attempt_id="$(date -u '+%Y%m%dT%H%M%SZ')-$"
 run_root="$work_root/runs/$source_key/$profile/$attempt_id"
 build_dir="$run_root/build"
 toolchain_dir="$run_root/toolchain"
-ports_dir="$work_root/portssources"
+ports_dir="$run_root/portssources"
 artifact_dir="$run_root/artifacts"
 
 if [ -n "${BUILDTHREADS:-}" ]; then
@@ -122,12 +114,30 @@ case "$jobs" in
     0) die "BUILDTHREADS must be greater than zero" ;;
 esac
 
+mkdir -p "$work_root"
+work_root="$(cd -- "$work_root" && pwd -P)"
+
+case "$work_root/" in
+    "$repo_root/"*)
+        die "NEXUS_WORK_ROOT must be outside the Git worktree"
+        ;;
+esac
+
+run_root="$work_root/runs/$source_key/$profile/$attempt_id"
+build_dir="$run_root/build"
+toolchain_dir="$run_root/toolchain"
+ports_dir="$run_root/portssources"
+artifact_dir="$run_root/artifacts"
+
 [ ! -e "$run_root" ] || die "run path already exists: $run_root"
 mkdir -p "$build_dir" "$toolchain_dir" "$ports_dir" "$artifact_dir"
 
 manifest="$artifact_dir/build-manifest.txt"
+submodule_manifest="$artifact_dir/submodules.txt"
 iso_out="$artifact_dir/aros-pc-x86_64.iso"
 status=failed
+
+git -C "$repo_root" submodule status --recursive > "$submodule_manifest"
 
 finish()
 {
@@ -170,6 +180,8 @@ trap finish EXIT
     printf 'TOOLCHAIN_INPUT_KEY=%s\n' "$toolchain_input_key"
     printf 'ATTEMPT_ID=%s\n' "$attempt_id"
     printf 'RUN_ROOT=%s\n' "$run_root"
+    printf 'SUBMODULE_MANIFEST=%s\n' "$submodule_manifest"
+    printf 'SUBMODULE_MANIFEST_SHA256=%s\n' "$(sha256_file "$submodule_manifest")"
     printf 'BUILDTHREADS=%s\n' "$jobs"
     printf 'HOST_UNAME=%s\n' "$(uname -a | tr '\r\n' '  ')"
     printf 'BUILD_DIR=%s\n' "$build_dir"
