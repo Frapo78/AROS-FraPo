@@ -27,8 +27,13 @@ sha256_file()
 manifest_value()
 {
     local key="$1"
+    local count
 
-    awk -F= -v key="$key"         '$1 == key { value=$0; sub(/^[^=]*=/, "", value) } END { print value }'         "$manifest"
+    count="$(awk -F= -v key="$key" '$1 == key { count++ } END { print count + 0 }' "$manifest")"
+    [ "$count" -eq 1 ] ||
+        die "run manifest must contain exactly one $key entry"
+
+    awk -F= -v key="$key"         '$1 == key { value=$0; sub(/^[^=]*=/, "", value); print value; exit }'         "$manifest"
 }
 
 if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
@@ -50,14 +55,29 @@ esac
 manifest="$run_dir/run-manifest.txt"
 [ -f "$manifest" ] || die "run manifest not found: $manifest"
 
+format="$(manifest_value FORMAT)"
 final_status="$(manifest_value FINAL_STATUS)"
 qemu_exit="$(manifest_value QEMU_EXIT_CODE)"
 mode="$(manifest_value MODE)"
 iso_sha256="$(manifest_value ISO_SHA256)"
 
-[ -n "$final_status" ] || die "QEMU run is incomplete: FINAL_STATUS is missing"
-[ -n "$qemu_exit" ] || die "QEMU run is incomplete: QEMU_EXIT_CODE is missing"
-[ -n "$mode" ] || die "QEMU run manifest has no MODE"
+[ "$format" = "nexus-qemu-v0" ] ||
+    die "unsupported run manifest format: $format"
+
+case "$qemu_exit" in
+    ''|*[!0-9]*) die "invalid QEMU_EXIT_CODE: $qemu_exit" ;;
+esac
+
+case "$mode" in
+    interactive|headless) ;;
+    *) die "invalid MODE in run manifest: $mode" ;;
+esac
+
+case "$final_status" in
+    vm-exited-unverified|timeout-unverified|qemu-error-unverified) ;;
+    *) die "invalid FINAL_STATUS in run manifest: $final_status" ;;
+esac
+
 [ -n "$iso_sha256" ] || die "QEMU run manifest has no ISO_SHA256"
 
 if [ "$result" = pass ]; then
@@ -65,6 +85,8 @@ if [ "$result" = pass ]; then
         die "cannot record pass for a QEMU run with exit code $qemu_exit"
     [ "$mode" = interactive ] ||
         die "cannot record manual Wanderer pass for a headless run"
+    [ "$final_status" = "vm-exited-unverified" ] ||
+        die "cannot record pass for QEMU status $final_status"
 fi
 
 record_file="$run_dir/wanderer-verification.txt"
