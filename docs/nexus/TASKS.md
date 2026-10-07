@@ -5,7 +5,7 @@ GitHub Issues are currently disabled for this repository, so Phase 0 tracking li
 ## Phase 0 — Baseline and guardrails
 
 ### P0.1 — x86-64 boot map
-Status: **in progress**
+Status: **draft complete**
 
 Deliverable: `docs/nexus/X86_64_BOOT_MAP.md`
 
