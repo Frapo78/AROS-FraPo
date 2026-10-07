@@ -2,67 +2,66 @@
 
 > Operational contract for AI-assisted Nexus work.
 >
-> This file is intentionally short. It does not replace the architecture documents.
+> Read this before non-trivial implementation or review.
+> Detailed rationale lives under `docs/nexus/`.
 
-## 1. Current direction
+## 1. Current architecture
 
-Read these before non-trivial work:
+Current direction: ADR-0002.
 
-- `docs/nexus/adr/0002-convergent-aros-nexus-architecture.md`
+> AROS remains the primary system runtime. Nexus becomes the small privileged executive beneath it.
+
+Do not create, without a superseding ADR:
+
+- a parallel OS;
+- mandatory ExecNG ecosystem;
+- mandatory whole-AROS Legacy Cell;
+- fork-only m68k replacement stack.
+
+Read when relevant:
+
 - `docs/nexus/ARCHITECTURE.md`
 - `docs/nexus/ROADMAP.md`
 - `docs/nexus/REVIEW_PROTOCOL.md`
 - `docs/nexus/VERIFICATION_MODEL.md`
-
-Current architecture:
-
-> AROS remains the primary system runtime. Nexus becomes the small privileged executive beneath it.
-
-Do not create a parallel OS, mandatory ExecNG ecosystem, mandatory whole-AROS Legacy Cell, or fork-specific m68k replacement without a superseding ADR.
 
 ## 2. Upstream first
 
 Before touching a subsystem:
 
 1. inspect current `aros-development-team/AROS:master`;
-2. compare it with the recorded tested baseline;
-3. identify relevant upstream commits;
-4. integrate or account for them before implementing a competing local solution.
+2. compare with the tested baseline;
+3. identify relevant upstream changes;
+4. integrate or account for them before local implementation.
 
-Before merge, repeat the upstream check.
+Repeat before merge.
 
-`master` in this fork tracks upstream only.
+Fork `master` tracks upstream only.
 
-Do not put Nexus implementation commits on `master`.
+Do not put Nexus implementation on `master`.
 
-## 3. Tested baseline is not upstream head
+## 3. Tracking head != tested baseline
 
-Two concepts are distinct:
+- tracking head = latest upstream state monitored;
+- tested baseline = upstream commit with recorded build/boot evidence.
 
-- **tracking head** — latest upstream state being monitored;
-- **tested baseline** — upstream commit with recorded build/boot evidence.
-
-Do not advance `docs/nexus/BASELINE.md` merely because `master` advanced.
+Do not move `BASELINE.md` just because upstream moved.
 
 ## 4. U / A / N ownership
 
 Classify every significant touched area:
 
-- **U — upstream-owned:** keep almost unchanged;
-- **A — adapted:** smallest possible Nexus seam;
-- **N — Nexus-owned:** new Nexus substrate/tooling.
+- **U** — upstream-owned;
+- **A** — adapted through the smallest useful Nexus seam;
+- **N** — Nexus-owned.
 
 Too much A-class code is a warning.
 
-For A-class code record:
-
-- why the seam exists;
-- why U-class is insufficient;
-- how the seam could later be removed.
+For A-class work record why the seam exists and how it could later be removed.
 
 ## 5. Trust ratchet
 
-For machine authority, record the current state:
+For machine authority record:
 
 1. legacy-owned;
 2. shared/adapted;
@@ -78,54 +77,58 @@ Relevant authority includes:
 - DMA/IOMMU;
 - device ownership.
 
-Once a protected mode reaches Nexus-owned authority, do not silently add a legacy bypass.
+Do not reintroduce a legacy bypass after protected ownership reaches Nexus.
 
 ## 6. Bridgeability
 
-Before crossing a protection boundary, classify the interface:
+Before crossing a protection boundary classify:
 
 - **B0** — direct-only legacy;
 - **B1** — generated value/handle bridge;
 - **B2** — explicit manual bridge;
 - **B3** — protected-native contract.
 
-Never automatically serialize unknown raw pointers, pointer-to-pointer arguments, Hooks/callbacks, physical addresses or implicit shared lifetime.
+Never blindly serialize:
 
-Generators must fail closed on unknown unsafe types.
+- raw pointers;
+- pointer-to-pointer arguments;
+- Hooks/callbacks;
+- physical addresses;
+- implicit shared lifetime.
+
+Generators fail closed on unknown unsafe types.
 
 ## 7. Work unit
 
-One non-trivial issue should normally have:
+A non-trivial issue normally has:
 
 - one focused feature branch;
 - one logical scope;
-- one integrator responsible for final coherence.
+- one logical integrator.
 
-Multiple agents may contribute analysis/tests/review to the same branch.
+Multiple agents may contribute analysis, code, tests or review.
 
-Do not create several competing implementation branches for the same kernel seam unless the issue explicitly calls for an experiment comparison.
+One integrator owns final coherence.
 
-## 8. Acceptance criteria before implementation
+## 8. Acceptance criteria first
 
-A non-trivial issue must define:
+Before implementation define:
 
 - goal;
 - non-goals;
 - preconditions;
-- U/A/N class;
+- U/A/N ownership;
+- B0-B3 if relevant;
 - acceptance criteria;
 - negative/red-team criteria;
 - required automated evidence;
-- required human evidence;
-- required hardware evidence;
-- affected L0-L5 claim, if any;
+- required human/hardware evidence;
+- affected L0-L5 claim;
 - stop conditions.
 
-If the task cannot be falsified, refine the task before coding.
+If the task cannot be falsified, refine it before coding.
 
 ## 9. Three reviews
-
-Every non-trivial code or architecture change requires three distinct passes.
 
 ### Review 1 — Construction
 
@@ -135,7 +138,6 @@ Check:
 - scope;
 - ownership/lifetime;
 - error paths;
-- API clarity;
 - unnecessary complexity.
 
 ### Review 2 — Integration
@@ -148,22 +150,21 @@ Check:
 - portability;
 - latest upstream;
 - U/A/N impact;
-- affected build/test paths.
+- affected test/build paths.
 
 ### Review 3 — Evidence Red Team
 
 Assume the change is wrong.
 
-Try to produce external evidence that falsifies it:
+Try to falsify it with:
 
-- negative test;
-- failing regression;
+- negative/regression test;
 - malformed input;
 - fault injection;
 - race/stress test;
 - invalid capability;
 - permission violation;
-- stale-handle test;
+- stale handle;
 - TLB/IRQ/DMA scenario;
 - direct/isolated conformance failure.
 
@@ -171,57 +172,48 @@ Rule:
 
 > **NO TEST, EXPLAIN WHY.**
 
-If an executable test cannot be produced, document why and provide the strongest concrete counterexample/failure scenario available.
+If an executable adversarial test is not possible, document why, the strongest concrete failure scenario, current evidence and what prerequisite would make the test possible.
 
-An AI opinion alone is not red-team evidence.
+AI agreement alone is not evidence.
 
 ## 10. Evidence hierarchy
 
-Confidence increases roughly in this order:
+Confidence roughly increases through:
 
-1. agent reasoning/opinion;
-2. static analysis;
-3. unit/negative test;
-4. integration/regression test;
-5. deterministic QEMU test;
-6. cross-architecture test;
-7. real-hardware test;
-8. independent competent human review.
+- E0 reasoning;
+- E1 static/mechanical validation;
+- E2 focused executable test;
+- E3 integration/regression;
+- E4 deterministic QEMU;
+- E5 cross-architecture;
+- E6 physical hardware;
+- E7 independent expert review.
 
-More agents do not automatically increase evidence level.
-
-Three agreeing models are weaker evidence than one reproducible failing test.
+More agents do not automatically raise the evidence level.
 
 ## 11. Human/hardware gates
 
 ### H0 — machine-verifiable
 
-Typical:
+Typical docs/tooling/simple non-critical generators.
 
-- docs;
-- project tooling;
-- simple generators;
-- non-critical tests.
+### H1 — human technical review required
 
-CI + normal review may be sufficient.
-
-### H1 — human review required before merge
-
-Required for changes affecting:
+Required for:
 
 - kernel;
 - scheduler;
 - MMU;
 - fault handling;
 - privilege;
-- capability/IPC core;
+- capability/IPC authority;
 - ABI/protection boundary.
 
-AI may implement and review, but must not be the only basis for acceptance.
+AI may implement/review, but AI-only acceptance is insufficient.
 
-### H2 — real-hardware evidence required
+### H2 — physical-hardware evidence required
 
-Required when the claim materially depends on physical:
+Required for material claims involving:
 
 - IOMMU/DMA;
 - PCIe/NVMe;
@@ -231,15 +223,13 @@ Required when the claim materially depends on physical:
 - GPU;
 - power/resume.
 
-Stop dependent work until hardware evidence is recorded.
+### H3 — independent expert review
 
-### H3 — independent expert review required for strong security claims
-
-Before a release makes serious claims such as strong L2-L5 isolation/security, obtain competent independent review of the relevant invariants.
+Required before strong release-level L2-L5 security/isolation claims.
 
 ## 12. Isolation claims
 
-Use only the highest level actually demonstrated:
+Use only the highest demonstrated level:
 
 - L0 — compatibility-domain classification/containment;
 - L1 — CPU memory isolation;
@@ -248,109 +238,104 @@ Use only the highest level actually demonstrated:
 - L4 — DMA isolation;
 - L5 — service fault isolation.
 
+No L1-L5 claim is accepted on AI review alone.
+
 Never infer:
 
 - different address space => hardware isolation;
 - MMU isolation => DMA isolation;
 - m68k contained memory => Nexus sandbox;
-- service process => restartable/contained;
-- AI review => security proof.
+- process boundary => restartability.
 
-No L1-L5 claim is accepted on AI review alone.
+## 13. Hardware stop
 
-## 13. Hardware stop rule
+If QEMU cannot establish the required property:
 
-If QEMU cannot establish the required property with sufficient confidence:
-
-1. stop dependent implementation;
+1. stop dependent work;
 2. prepare exact commit/artifact;
-3. document hardware required;
-4. document test procedure;
+3. document hardware;
+4. document procedure;
 5. document expected result;
-6. document risk/recovery procedure;
+6. document risk/recovery;
 7. wait for real evidence.
 
 Independent work may continue only if it does not assume the blocked result.
 
-## 14. m68k compatibility
+## 14. m68k
 
-Primary path is upstream `rom/m68kemu`.
+Primary compatibility path: upstream `rom/m68kemu`.
 
 Do not build a competing fork-only translator without strong evidence and a dedicated ADR.
 
-Compatibility is not the same as security containment.
+Compatibility is not security containment.
 
-## 15. AI/LLM scope
+## 15. AI scope
 
-AI is a future optional service consumer, not part of the Nexus kernel TCB.
+AI/LLM is a future optional service consumer, not part of the Nexus kernel TCB.
 
-Do not block Phase 0-5 work on AI.
+Do not block Phase 0-5 on AI.
 
-Useful general foundations are:
+General foundations may include:
 
-- asynchronous messaging;
+- async messaging;
 - capabilities;
 - MemoryObjects;
 - service discovery;
 - structured automation;
 - future compute abstraction.
 
-## 16. Required branch/PR discipline
+## 16. Branch / PR discipline
 
 For non-trivial implementation:
 
-- feature branch from current `nexus/main`;
-- focused PR;
-- one logical change;
-- all required checks green;
-- Review 1/2/3 documented;
-- upstream rechecked before merge;
-- H1/H2/H3 requirements satisfied when applicable.
+- branch from current `nexus/main`;
+- keep one logical change;
+- document Review 1/2/3;
+- rerun upstream check before merge;
+- require relevant checks green;
+- satisfy H1/H2/H3 when applicable.
 
-Use squash merge when intermediate corrective commits add no historical value.
+Squash intermediate corrective commits when they add no historical value.
 
-## 17. Upstream contribution discipline
+## 17. Upstream contribution
 
-Current upstream AROS `CONTRIBUTING.md` does not state an explicit blanket AI ban.
+Current upstream AROS `CONTRIBUTING.md` has no explicit blanket AI ban.
 
-Do not infer broad permission from that.
+Do not assume that remains true.
 
-Before the first significant Nexus-originated upstream PR:
+Before significant Nexus-originated upstream work:
 
-- discuss the change with the AROS core/community as their CONTRIBUTING guide requests;
-- ask whether they expect specific AI-assistance disclosure;
-- disclose AI assistance honestly when relevant;
-- make the human contributor responsible for the submitted code, tests and license/provenance.
+- re-read current policy;
+- discuss changes with the AROS team when requested;
+- ask what AI-assistance disclosure they expect;
+- disclose assistance honestly where relevant;
+- keep human responsibility for code, tests, licensing and provenance.
 
 ## 18. Pace
 
-A productive work cycle may end with:
+A productive cycle may end with:
 
 - analysis;
-- a failing test;
-- a rejected idea;
+- failing test;
+- rejected idea;
 - documentation;
 - upstream integration;
 - reduced scope;
-- a hardware stop;
+- hardware stop;
 - no commit.
 
-Commit count is not progress.
-
-Evidence and reduced uncertainty are progress.
+Reduced uncertainty is progress.
 
 ## 19. First protection milestone
 
-The first meaningful protection milestone remains falsifiable.
-
-A future N1 CPU Protection Proof should eventually demonstrate, with executable evidence:
+N1 should eventually demonstrate with executable evidence:
 
 - distinct CR3/address spaces;
-- private mappings inaccessible across domains;
-- explicit shared MemoryObject still accessible;
+- private mappings blocked cross-domain;
+- explicit shared MemoryObject works;
 - NX fault is real;
 - supervisor write protection is real where required;
-- protected fault is classified/contained;
+- protected fault is contained;
 - repeated safe context switches.
 
-Do not declare N1 from code inspection alone.
+Do not declare N1 from code inspection.
