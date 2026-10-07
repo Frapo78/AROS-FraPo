@@ -4,6 +4,18 @@
 >
 > Purpose: preserve ABI v1 semantics without allowing legacy software to inherit Nexus supervisor authority.
 
+## Scope under ADR-0002
+
+This document applies when legacy privilege crosses an explicit Nexus protection boundary, especially for:
+
+- selective Legacy Cells;
+- protected AROS execution;
+- isolated services that expose compatibility APIs.
+
+It no longer implies that the entire normal AROS runtime must run inside a Legacy Cell.
+
+During convergence, the ordinary ABI v1 Compatibility Trust Domain may temporarily retain historical privilege. Such a configuration must not claim L2 privilege isolation until those paths have been extracted or mediated.
+
 ## 1. The problem
 
 Classic AROS exposes interfaces whose historical meaning assumes that trusted software may directly affect machine privilege.
