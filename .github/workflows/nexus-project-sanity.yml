@@ -34,7 +34,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Verify required Nexus documents
+      - name: Verify required Nexus files
         shell: bash
         run: |
           set -euo pipefail
@@ -66,7 +66,7 @@ jobs:
           )
           for file in "${required[@]}"; do
             test -f "$file" || {
-              echo "::error::Missing required Nexus document: $file"
+              echo "::error::Missing required Nexus file: $file"
               exit 1
             }
           done
@@ -78,35 +78,36 @@ jobs:
           import re
           import sys
 
-          root = Path("docs/nexus")
+          roots = [Path("docs/nexus"), Path("scripts/nexus")]
           link_re = re.compile(r'(?<!!)\[[^\]]*\]\(([^)]+)\)')
           failures = []
 
-          for md in root.rglob("*.md"):
-              text = md.read_text(encoding="utf-8")
-              for target in link_re.findall(text):
-                  target = target.strip()
-                  if (
-                      not target
-                      or target.startswith("#")
-                      or "://" in target
-                      or target.startswith("mailto:")
-                  ):
-                      continue
+          for root in roots:
+              for md in root.rglob("*.md"):
+                  text = md.read_text(encoding="utf-8")
+                  for target in link_re.findall(text):
+                      target = target.strip()
+                      if (
+                          not target
+                          or target.startswith("#")
+                          or "://" in target
+                          or target.startswith("mailto:")
+                      ):
+                          continue
 
-                  path_part = target.split("#", 1)[0]
-                  if not path_part:
-                      continue
+                      path_part = target.split("#", 1)[0]
+                      if not path_part:
+                          continue
 
-                  resolved = (md.parent / path_part).resolve()
-                  try:
-                      resolved.relative_to(Path.cwd().resolve())
-                  except ValueError:
-                      failures.append((md, target, "escapes repository"))
-                      continue
+                      resolved = (md.parent / path_part).resolve()
+                      try:
+                          resolved.relative_to(Path.cwd().resolve())
+                      except ValueError:
+                          failures.append((md, target, "escapes repository"))
+                          continue
 
-                  if not resolved.exists():
-                      failures.append((md, target, "target does not exist"))
+                      if not resolved.exists():
+                          failures.append((md, target, "target does not exist"))
 
           if failures:
               for source, target, reason in failures:
