@@ -28,6 +28,7 @@ if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
     exit 2
 fi
 
+[ -d "$1" ] || die "run directory not found: $1"
 run_dir="$(cd -- "$1" && pwd)"
 result="$2"
 note="${3:-}"
