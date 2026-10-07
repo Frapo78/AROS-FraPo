@@ -2,255 +2,373 @@
 
 > Status: architectural baseline
 >
-> Branch: `nexus/main`
+> Current direction: convergent AROS / Nexus architecture
+>
+> Governing decision: [ADR-0002](adr/0002-convergent-aros-nexus-architecture.md)
 
-Nexus is the protected execution architecture proposed for AROS-FraPo. Its purpose is to let AROS preserve the classic Amiga/AROS execution model where that model is required for compatibility, while also providing modern isolation, SMP scalability, driver containment and hardware support.
+Nexus is the protected executive architecture being explored inside AROS-FraPo.
 
-For the motivation and community-facing description, see [VISION.md](VISION.md).
+Its purpose is to let AROS evolve deeply without splitting into two permanently separate operating systems.
 
-Security and implementation details are split into focused documents:
+The central architectural decision is:
 
+> **AROS remains the primary runtime. Nexus becomes the small privileged executive beneath it.**
+
+For the detailed model, see:
+
+- [VISION.md](VISION.md)
+- [CONVERGENT_ARCHITECTURE.md](CONVERGENT_ARCHITECTURE.md)
 - [TRUST_MODEL.md](TRUST_MODEL.md)
-- [LEGACY_PRIVILEGE_MODEL.md](LEGACY_PRIVILEGE_MODEL.md)
-- [NEXUS_EXEC_SPLIT.md](NEXUS_EXEC_SPLIT.md)
 - [ADDRESS_SPACE_MODEL.md](ADDRESS_SPACE_MODEL.md)
-
-## Architectural philosophy
-
-Nexus starts from the assumption that AROS should not need to choose between its Amiga heritage and credible modern systems engineering.
-
-The architecture therefore treats both as first-class requirements:
-
-- **Amiga/AROS compatibility is not a temporary migration problem.** ABI v1 remains a supported execution contract.
-- **Protection is not optional decoration.** New native software and isolated services must be able to rely on hardware-enforced address-space boundaries.
-- **Exec concepts remain culturally important.** New protected primitives should evolve the message-driven AROS model rather than automatically importing Unix semantics.
-- **Modern hardware must be native, not bolted on.** SMP, DMA isolation, NVMe, UEFI, modern buses and current CPU architectures belong in the core design.
-- **The system must remain understandable.** Nexus should prefer small mechanisms, explicit boundaries and inspectable protocols over opaque complexity.
-
-This document describes an experimental direction. It does not claim to be an official upstream AROS architecture until and unless the AROS community chooses to adopt any part of it.
-
+- [NEXUS_EXEC_SPLIT.md](NEXUS_EXEC_SPLIT.md)
+- [UPSTREAM_INTEGRATION.md](UPSTREAM_INTEGRATION.md)
+- [AI_FOUNDATIONS.md](AI_FOUNDATIONS.md)
 
 ## 1. Non-negotiable goals
 
-Nexus must satisfy all of the following:
+Nexus must aim to satisfy all of the following:
 
-1. Existing AROS/Amiga ABI v1 software must continue to run with its expected Exec/DOS/Intuition semantics.
-2. New native software must be able to run in isolated address spaces with hardware-enforced memory protection.
-3. The modern kernel must not depend on Amiga shared-pointer semantics.
-4. Legacy compatibility must not determine the security model of the whole operating system.
-5. Hardware ownership, DMA, interrupts and privileged CPU state belong to Nexus.
-6. The user must experience one coherent desktop, filesystem, clipboard, network and device environment.
-7. Modernization must be incremental: every milestone must leave the system bootable and testable.
+1. Existing AROS software remains usable and upstream AROS remains continuously integrable.
+2. Amiga/AROS compatibility is preserved as an explicit contract rather than treated as temporary baggage.
+3. New protected execution becomes possible with hardware-enforced address-space boundaries.
+4. Machine privilege, page tables, physical IRQ ownership and DMA authority can be separated from unsafe legacy assumptions.
+5. Exec remains central to the identity of the system; Nexus does not replace it with a Unix process model.
+6. Modernization is incremental and measurable.
+7. The trusted Nexus core stays small and architecture-neutral.
+8. Protection is selective: boundaries are introduced where they provide meaningful safety or restartability.
+9. No protected boundary relies on implicit cross-domain raw-pointer authority.
+10. The architecture remains revisable when implementation evidence or upstream evolution demands it.
 
-## 2. Core idea: two execution domains
+## 2. System shape
 
-The historical conflict cannot be solved inside one address-space contract. ABI v1 assumes that tasks may exchange pointers and inspect shared structures. A protected process model assumes that arbitrary pointers are not valid across process boundaries.
+The long-term model has three major planes.
 
-Nexus therefore separates these semantics.
+```
+┌──────────────────────────────────────────────────┐
+│                  APPLICATIONS                    │
+│ native AROS | m68k Amiga | future protected    │
+└──────────────────────┬───────────────────────────┘
+                       │
+┌──────────────────────▼───────────────────────────┐
+│                 AROS RUNTIME                     │
+│ Exec • DOS • Intuition • Zune • Wanderer        │
+│ HIDD/OOP • AHI • Poseidon • AROSTCP • m68kemu   │
+└──────────────────────┬───────────────────────────┘
+                       │
+             stable/generated contracts
+                       │
+╔══════════════════════▼═══════════════════════════╗
+║                NEXUS EXECUTIVE                   ║
+║ CPU • Thread • AddressSpace • MemoryObject       ║
+║ Endpoint • Capability • IRQ • Timer              ║
+║ Device authority • DMA/IOMMU • fault ownership  ║
+╚══════════════════════╤═══════════════════════════╝
+                       │
+┌──────────────────────▼───────────────────────────┐
+│                    HARDWARE                      │
+└──────────────────────────────────────────────────┘
+```
 
-### Legacy Domain
+This is not intended to become a rigid stack of translation layers.
 
-A Legacy Cell contains the existing AROS execution environment:
-
-- Exec tasks
-- DOS processes
-- classic message ports
-- signals
-- library bases
-- Intuition
-- BOOPSI/Zune
-- legacy device semantics
-- shared-pointer ABI v1 behaviour
-
-Inside a Legacy Cell, the classic programming model remains valid.
-
-The cell as a whole is unprivileged from the point of view of Nexus.
-
-### Protected Domain
-
-Native Nexus applications use:
-
-- isolated address spaces
-- opaque handles/capabilities
-- protected IPC endpoints
-- explicit shared-memory grants
-- controlled device access
-- W^X mappings
-- per-process credentials
-- fault containment
-
-No arbitrary pointer may cross a protection boundary.
+Most AROS calls should remain direct unless crossing a protection boundary has a concrete benefit.
 
 ## 3. Nexus kernel contract
 
-The Nexus core should understand only low-level objects:
+The Nexus core should understand only low-level protection objects:
 
-- CPU
-- Thread
-- AddressSpace
-- MemoryObject
-- Capability
-- Endpoint
-- IRQ
-- Timer
-- Device
-- DMA mapping
+- CPU;
+- Thread;
+- AddressSpace;
+- MemoryObject;
+- Endpoint;
+- Capability;
+- IRQ;
+- Timer;
+- Device authority;
+- DMA mapping/domain.
 
-It must not know about:
+It must not need to understand:
 
-- Window
-- Gadget
-- DOS Process
-- Amiga library internals
-- BOOPSI
-- Wanderer
+- Window;
+- Gadget;
+- DOS Process;
+- BOOPSI;
+- Wanderer;
+- FileInfoBlock;
+- application policy.
 
-Those belong above the protection boundary.
+Those remain in AROS.
 
-### Current kernel.resource is an extraction seam, not Nexus itself
+## 4. Mechanism below, policy above
 
-The existing `kernel.resource` is strategically valuable because it already concentrates MMU, IRQ, CPU-context and scheduler-adjacent mechanisms.
+This is the most important stability boundary.
 
-It is not yet the final Nexus boundary.
+### Nexus mechanism
 
-Current native implementations still interact with `SysBase`, `struct Task`, Exec scheduler state and ABI v1 privilege semantics. Nexus must extract machine ownership from that code while leaving Exec-specific policy in a Legacy compatibility layer.
+Examples:
 
-The target is therefore:
+- switch AddressSpace;
+- schedule a protected Thread;
+- map/revoke MemoryObject rights;
+- deliver physical IRQ events;
+- classify faults;
+- allocate DMA authority.
+
+### AROS policy
+
+Examples:
+
+- Exec Task scheduling semantics;
+- Forbid/Permit;
+- DOS process semantics;
+- library/device lifecycle;
+- Intuition behaviour;
+- user-facing resource policy.
+
+Nexus should not need to follow every internal AROS representation change.
+
+## 5. Current kernel.resource is an extraction seam
+
+`kernel.resource` remains strategically important because it already concentrates:
+
+- MMU functions;
+- CPU context operations;
+- interrupts;
+- scheduling-adjacent mechanisms;
+- SMP/IPI support;
+- diagnostics.
+
+It is not itself Nexus.
+
+Current implementations still depend on:
+
+- `SysBase`;
+- `struct Task`;
+- Exec lists;
+- legacy privilege semantics.
+
+The extraction target is therefore:
 
 ```
-Exec / ABI v1 policy
+AROS / Exec policy
         |
-Legacy kernel compatibility
+   narrow adapter
         |
--------- protection boundary --------
+-------- stable mechanism boundary --------
         |
-Nexus machine primitives
+Nexus Executive
 ```
 
 See [NEXUS_EXEC_SPLIT.md](NEXUS_EXEC_SPLIT.md).
 
-## 4. Legacy Cell contract
+## 6. Exec remains the native programming culture
 
-A Legacy Cell is a protected container for the existing ABI v1 world.
+Nexus does not create a mandatory parallel ExecNG runtime.
 
-Within a cell:
+Where new protected semantics are needed, prefer:
 
-- pointers remain meaningful across Exec tasks;
-- `PutMsg()`, `Signal()`, `OpenLibrary()`, `AllocMem()`, `Forbid()` and `Permit()` retain their expected semantics;
-- existing AROS libraries can initially remain largely unchanged;
-- the current Exec scheduler may continue to schedule tasks internally.
+- additive AROS APIs;
+- versioned interfaces;
+- optional protected variants;
+- internal Nexus adapters.
 
-Outside a cell:
+The following concepts remain valuable:
 
-- no legacy pointer is trusted;
-- no cell can directly modify Nexus memory;
-- no cell owns raw interrupt controllers or unrestricted DMA;
-- communication crosses a validated Nexus boundary.
+- tasks/threads;
+- signals/events;
+- message ports;
+- libraries;
+- devices;
+- resources;
+- asynchronous I/O.
 
-A catastrophic failure inside a Legacy Cell may kill the cell, but must not corrupt Nexus, native applications or isolated driver domains.
+Unsafe implementation assumptions should not become permanent protected contracts.
 
-## 5. Scheduling model
+## 7. Compatibility contracts
 
-The first implementation uses hierarchical scheduling.
+### Native AROS ABI v1
 
-Nexus schedules:
+ABI v1 remains supported by the normal AROS runtime.
 
-- protected native threads;
-- driver-service threads;
-- one or more Legacy Cell vCPUs.
+The shared-pointer model may continue where compatibility requires it.
 
-Inside the Legacy Cell, the current Exec scheduler continues to schedule ABI v1 tasks.
+That does not give shared pointers authority across protected Nexus boundaries.
 
-This deliberately avoids rewriting Exec during the first architecture milestone.
+### Selective Legacy Cells
 
-Later, Exec may acquire a Nexus scheduler backend, but that is not required for the MVP.
+Legacy Cells remain available when software requires:
 
-## 6. IPC and capabilities
+- historical supervisor assumptions;
+- strong containment as a group;
+- risky legacy execution;
+- compatibility experimentation.
 
-Protected-domain communication uses opaque capabilities.
+They are not the mandatory home of the entire normal AROS runtime.
 
-A capability grants authority to a specific kernel object. A process cannot manufacture one by guessing an integer value.
+### m68k Amiga software
 
-Initial object classes:
+The primary path is upstream AROS `m68kemu.library`.
 
-- endpoint
-- memory object
-- process/thread
-- file/service handle
-- device channel
-- IRQ subscription
-- DMA object
+Nexus should consume and, where useful, contribute to:
 
-Capabilities are transferable only when the sender owns transfer rights.
+- its transparent launch integration;
+- generated thunks;
+- shadow-structure translation;
+- containment;
+- future acceleration.
 
-The public ABI must not expose Nexus kernel pointers.
+A fork-specific replacement translator is not the default plan.
 
-## 7. Shared memory without global memory
+## 8. Protected execution
 
-Large data transfers must not require copies.
+Protected execution is an additional capability of AROS, not a separate operating-system personality.
 
-Nexus therefore provides MemoryObjects. A MemoryObject represents pages that may be mapped into one or more AddressSpaces with independently controlled permissions.
+A protected boundary uses:
 
-A transfer describes:
+- isolated AddressSpaces;
+- explicit MemoryObjects;
+- validated Endpoints;
+- capabilities/handles;
+- real R/W/X permissions;
+- domain-aware fault handling.
 
-- object capability
-- offset
-- length
-- rights
+No raw virtual address is assumed to be meaningful across such a boundary.
 
-not a raw virtual address.
+The exact public protected-process API is intentionally not frozen yet.
 
-Expected users include:
+## 9. Service fabric
 
-- graphics surfaces
-- audio buffers
-- network packet rings
-- filesystem caches
-- video buffers
-- DMA buffers
+Existing AROS interfaces should drive both direct and isolated implementations.
 
-## 8. Hardware ownership
-
-Nexus owns privileged hardware resources.
-
-The long-term driver model is:
+Conceptually:
 
 ```
-AROS service/library
-        |
-        v
-     HIDD proxy
-        |
-        | Nexus IPC
-        v
- isolated driver domain
-        |
-        v
-     hardware
+               semantic interface
+                 /          \
+                /            \
+        direct call       generated proxy
+                               |
+                         Nexus Endpoint
+                               |
+                           service domain
 ```
 
-This lets AROS retain HIDD as the compatibility and object-model boundary while moving actual hardware access out of the Legacy Cell.
+A direct path is valid when:
 
-HIDD interfaces are **not assumed to be wire-safe IPC protocols**. Existing interfaces may contain raw pointers, Hooks, Interrupt structures, TagItems or OOP objects. A HIDD proxy therefore translates a legacy method into a canonical Nexus service protocol; it does not blindly serialize arbitrary HIDD call frames.
+- the code is trusted;
+- latency matters;
+- isolation brings little value.
 
-## 9. DMA and IOMMU
+An isolated path is valuable when:
 
-CPU memory protection is incomplete if a device can DMA anywhere in physical RAM.
+- the component parses hostile input;
+- driver failure should be recoverable;
+- authority should be restricted;
+- restartability matters.
 
-On IOMMU-capable platforms, Nexus must:
+Nexus is not a pure microkernel and does not require IPC everywhere.
 
-- own IOMMU configuration;
-- create DMA objects;
-- map only authorised physical pages;
-- prevent drivers from programming unrestricted DMA targets.
+## 10. Generator-first bridge strategy
 
-On hardware without an IOMMU, affected drivers are explicitly classified as trusted and the reduced isolation level must be visible to diagnostics.
+AROS already provides:
 
-### Isolation levels
+- FD files;
+- module `.conf` descriptions;
+- `genmodule`;
+- HIDD/OOP metadata;
+- m68k thunk generation;
+- shadow-layout generation.
 
-Nexus does not use the word "isolated" as a binary claim.
+Nexus should extend those sources before inventing separate interface schemas.
 
-Milestones report the highest property actually proven:
+Potential generated artifacts include:
+
+- direct stubs;
+- service dispatch;
+- validation metadata;
+- IPC proxies;
+- ABI thunks;
+- tests/documentation.
+
+Generated code must still enforce protected-boundary rules.
+
+## 11. Shared memory without global authority
+
+Nexus uses MemoryObjects to represent shareable pages.
+
+A mapping grants:
+
+- object;
+- offset;
+- length;
+- rights.
+
+not "this process may dereference another process's arbitrary pointer".
+
+Expected uses include:
+
+- graphics surfaces;
+- audio;
+- network rings;
+- storage buffers;
+- video;
+- compute/AI data;
+- DMA buffers.
+
+## 12. Hardware ownership
+
+Physical machine authority belongs to Nexus mechanisms.
+
+This includes, progressively:
+
+- page tables;
+- physical interrupt routing;
+- privileged CPU state;
+- MMIO ownership;
+- PCI/device authority;
+- DMA/IOMMU mappings.
+
+Existing AROS drivers do not all need to move behind IPC immediately.
+
+The architecture permits selective migration.
+
+## 13. HIDD relationship
+
+HIDD/OOP remains an important AROS abstraction and should be preserved.
+
+HIDD method frames are not assumed to be wire-safe.
+
+Interfaces containing:
+
+- pointers;
+- Hooks;
+- Interrupt structures;
+- TagItems;
+- OOP objects;
+
+require explicit/generated bridge logic before crossing an isolation boundary.
+
+HIDD remains the semantic interface; Nexus transport is an implementation choice.
+
+## 14. DMA and IOMMU
+
+CPU page protection alone cannot contain bus-master DMA.
+
+On supported hardware, Nexus should eventually own:
+
+- IOMMU configuration;
+- device DMA domains;
+- mapping of authorized MemoryObjects;
+- revocation.
+
+On systems without usable IOMMU support, affected drivers must be classified as trusted or use a reduced-isolation design.
+
+The active protection level must be visible in diagnostics.
+
+## 15. Isolation levels
+
+Nexus reports the highest property actually demonstrated:
 
 - **L0** — compatibility containment;
 - **L1** — CPU memory isolation;
@@ -259,107 +377,105 @@ Milestones report the highest property actually proven:
 - **L4** — DMA isolation;
 - **L5** — service fault isolation.
 
-A Legacy Cell that has separate page tables but still controls unrestricted bus-master DMA is not L4 and must not be described as fully isolated.
+No milestone should claim "fully isolated" merely because one of these properties works.
 
-See [TRUST_MODEL.md](TRUST_MODEL.md).
+## 16. POSIX
 
-## 10. ABI strategy
+POSIX remains a compatibility/runtime facility.
 
-### ABI v1
+Nexus does not redefine itself as a Unix kernel in order to support POSIX.
 
-ABI v1 is the historical AROS/Amiga compatibility ABI.
+Where protected primitives help POSIX, they may be reused.
 
-It is frozen for compatibility and lives primarily inside Legacy Cells.
+## 17. AI and automation
 
-### ABI v2
+No LLM belongs in the Nexus trusted kernel.
 
-ABI v2 is the protected Nexus-native ABI.
+Nexus only provides general mechanisms useful to future AI/agent systems:
 
-It is:
+- async messaging;
+- capabilities;
+- MemoryObjects;
+- service discovery;
+- generic compute acceleration;
+- protected tool/service access.
 
-- handle-based;
-- 64-bit clean;
-- SMP-safe;
-- address-space-safe;
-- capability-aware;
-- designed for W^X and ASLR;
-- independent of shared kernel structures.
+AROS may later expose AI/automation services above those mechanisms.
 
-ABI v2 should preserve the conceptual elegance of Exec without copying unsafe implementation assumptions.
+See [AI_FOUNDATIONS.md](AI_FOUNDATIONS.md).
 
-## 11. POSIX
+## 18. Upstream ownership model
 
-POSIX is a compatibility personality, not the kernel architecture.
+Nexus classifies areas as:
 
-Where possible, POSIX APIs are implemented over Nexus/ABI v2 primitives.
+- **U — upstream-owned**;
+- **A — adapted**;
+- **N — Nexus-owned**.
 
-Nexus does not adopt Unix process semantics merely to make POSIX easier.
+The goal is to keep most AROS code in U, keep A diffs narrow, and concentrate divergence in N.
 
-## 12. Desktop unification
+See [UPSTREAM_INTEGRATION.md](UPSTREAM_INTEGRATION.md).
 
-Legacy and native applications must appear in one desktop.
+## 19. First implementation direction
 
-The long-term display model uses surfaces delivered to a compositor. The compositor does not need to know whether a surface originated from:
+The first architecture target remains x86-64/QEMU.
 
-- legacy Intuition;
-- ABI v2 native UI;
-- POSIX software;
-- m68k compatibility.
+The first Nexus code is still deliberately small.
 
-This allows HiDPI, multiple displays, compositing and GPU acceleration without requiring legacy applications to understand them.
+### Proof 1 — explicit AddressSpace ownership
 
-## 13. Failure model
+Wrap the current runtime MMU root in an internal `NexusAddressSpace` abstraction with no intended AROS-visible behaviour change.
 
-The target containment hierarchy is:
+### Proof 2 — real protection semantics
 
-```
-application crash      -> terminate application
-legacy application     -> at worst terminate Legacy Cell
-network stack crash    -> restart network service
-driver crash           -> restart driver domain
-desktop crash          -> restart desktop service
-Nexus crash            -> system failure
-```
+Establish actual executable/write protection and domain-aware fault ownership.
 
-The project should continually reduce the amount of code whose failure can reach the final line.
+### Proof 3 — second protected context
 
-## 14. First implementation target
+Run a tiny separate AddressSpace and prove L1 CPU memory isolation.
 
-The first architecture target is x86-64 under QEMU.
+### Proof 4 — explicit sharing
 
-The first proof is deliberately smaller than a Legacy Cell.
+Share a MemoryObject intentionally between protected contexts.
 
-### Proof 1 — explicit address-space ownership
+None of these steps requires moving the complete AROS runtime into a Legacy Cell.
 
-Current AROS boots unchanged while its runtime MMU root is represented through an internal `NexusAddressSpace` abstraction.
+## 20. Performance principles
 
-This proves an architectural seam, not isolation.
+- do not require IPC for trusted local paths;
+- use zero-copy MemoryObjects for large data;
+- prefer asynchronous/batched interfaces;
+- keep the trusted core small;
+- measure every new protection boundary;
+- remove abstractions that cost more than the property they provide.
 
-### Proof 2 — protected payload
+## 21. Evolution policy
 
-A second address space runs a tiny controlled payload. A deliberate invalid access is classified as a domain fault and does not halt Nexus.
+Nexus has stable principles, not frozen mechanics.
 
-This is the first L1 proof.
+Fine tuning is expected.
 
-### Proof 3 — explicit sharing
+Larger changes are acceptable through ADRs when supported by evidence.
 
-Two protected contexts share only an explicitly granted MemoryObject while private pages remain inaccessible.
+The project should willingly remove a Nexus abstraction when:
 
-### Proof 4 — Legacy Cell
+- upstream AROS provides a better solution;
+- tests show the abstraction is unnecessary;
+- performance is unacceptable;
+- a security review invalidates it;
+- portability requires another mechanism.
 
-Only after those primitives work independently do we move ABI v1 Exec/DOS into a Legacy Cell.
+## 22. Architectural prohibitions
 
-Booting Wanderer inside that Cell is a major compatibility milestone, but its security claim is limited to the isolation levels actually enforced at that point. Hardware and DMA isolation are separate milestones.
+Until superseded by an ADR:
 
-## 15. Architectural prohibition list
-
-Until an explicit ADR changes these rules:
-
-- do not break ABI v1 to make Nexus easier;
-- do not expose raw Nexus pointers to userland;
-- do not make POSIX the native kernel API;
-- do not move GUI policy into the Nexus core;
-- do not require a complete Exec rewrite for the MVP;
-- do not give untrusted driver domains unrestricted physical-memory access;
-- do not make legacy compatibility code privileged merely because it historically was;
-- do not merge a milestone that cannot be exercised by an automated or reproducible test.
+- do not freeze AROS inside a fork-specific guest architecture;
+- do not create a parallel Exec ecosystem without evidence that extension is impossible;
+- do not duplicate upstream m68k compatibility by default;
+- do not expose raw Nexus pointers across protected boundaries;
+- do not make POSIX the native kernel identity;
+- do not require IPC everywhere;
+- do not put AI/LLM inference into the kernel TCB;
+- do not give untrusted drivers unrestricted DMA;
+- do not claim a protection level without a reproducible proof;
+- do not accept a deep fork from upstream as normal maintenance cost.

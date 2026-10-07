@@ -2,235 +2,266 @@
 
 ## Why I am doing this
 
-Nexus starts from a very personal motivation: a deep and long-standing passion for the Amiga.
+Nexus starts from a personal motivation: a deep and long-standing passion for Amiga.
 
-What made the Amiga special was never just nostalgia, custom chips, or the look of Workbench. It was the feeling that the whole machine had been designed as a coherent system: small, responsive, understandable, message-driven, and remarkably elegant for its time.
+What made Amiga special was never only the hardware, Workbench, or nostalgia. It was the coherence of the whole system: small, responsive, understandable, message-driven and unusually direct.
 
-AROS has kept a large part of that architectural culture alive while doing something even more ambitious: making it portable, open, maintainable and capable of evolving beyond the original hardware.
+AROS has kept much of that culture alive while doing something even harder: making the model open, portable and capable of evolving across very different hardware.
 
 I believe that work deserves to go further.
 
-My goal with Nexus is not to turn AROS into Linux, BSD, Windows or macOS. It is to explore whether the strongest ideas of the Amiga model can survive as first-class ideas in a genuinely modern operating system.
+Nexus is not an attempt to replace AROS with Linux, BSD, Windows, macOS or a new unrelated hobby operating system.
 
-That means taking the Amiga philosophy seriously enough to preserve it — and taking modern hardware seriously enough not to pretend that the constraints of the late 1980s are still acceptable system-wide.
+The goal is to help AROS become a stronger modern operating system while remaining recognizably AROS.
 
 ## The central question
 
-Nexus is built around one question:
+> Can the strongest Amiga and AROS ideas remain first-class system concepts while the operating system gains modern protection, multicore scalability, current hardware support and room for future computing models?
 
-> Can we preserve one of the leanest and most elegant desktop operating-system architectures of the 1980s and 1990s, while making it work sensibly on x86-64 multicore, ARM64, RISC-V, UEFI, NVMe, modern USB, IPv6, current graphics hardware and modern security expectations?
+Nexus exists to test whether the answer can be yes.
 
-I believe the answer can be yes, but only if compatibility and protection stop being forced into the same memory model.
+## The refined thesis
 
-## The thesis
+The project began by separating a Legacy Domain from a Protected Domain.
 
-Classic Amiga/AROS software expects a world built around:
+That distinction remains useful as a **safety contract**, but further analysis changed an important conclusion:
 
-- Exec Tasks;
-- shared structures;
+> AROS itself should not be trapped permanently behind a compatibility layer.
+
+AROS should remain the primary runtime.
+
+Nexus should become the small privileged executive beneath it.
+
+That means:
+
+- preserve and evolve Exec rather than replace it with a parallel ecosystem;
+- reuse DOS, Intuition, Zune, Wanderer, HIDD, AHI, Poseidon, AROSTCP and other AROS work;
+- extract modern machine mechanisms from current low-level AROS code rather than rewrite the system from zero;
+- introduce protection selectively where it produces real value;
+- keep compatibility mechanisms close to upstream AROS so they improve as AROS improves.
+
+This is the convergent architecture defined by ADR-0002.
+
+## What should remain unmistakably Amiga/AROS
+
+Nexus explicitly values:
+
+- asynchronous message passing;
+- Tasks and lightweight execution;
+- signals/events;
 - message ports;
-- signals;
 - libraries;
 - devices;
 - resources;
-- direct pointer exchange;
-- Intuition;
-- BOOPSI/Zune;
-- DOS processes.
-
-Those assumptions are valuable for compatibility and simplicity, but some of them conflict directly with:
-
-- per-process address spaces;
-- fault isolation;
-- driver isolation;
-- IOMMU-controlled DMA;
-- modern privilege separation;
-- W^X;
-- ASLR;
-- scalable multicore execution.
-
-Nexus does not try to make one model pretend to be the other.
-
-Instead it proposes two execution domains inside one coherent operating system:
-
-1. a **Legacy Domain**, where AROS/Amiga ABI v1 semantics remain valid;
-2. a **Protected Domain**, where new software can use isolated address spaces, capabilities, explicit shared memory and restartable services.
-
-The user should still see one system.
-
-## Preserve the Amiga character
-
-Nexus is not an excuse to discard what makes AROS recognisably Amiga-like.
-
-The project explicitly wants to preserve and evolve concepts such as:
-
-- Exec-style tasks and asynchronous messaging;
-- message ports as a first-class abstraction;
-- signals/events;
-- the library/device/resource model;
 - asynchronous I/O;
 - Intuition;
-- BOOPSI and Zune;
+- BOOPSI/Zune;
 - Wanderer;
-- lightweight system services;
 - fast startup;
-- directness and low conceptual overhead.
+- small components;
+- low conceptual overhead;
+- application interoperability.
 
-Where a new protected ABI is required, it should remain recognisably inspired by Exec rather than merely wrapping a Unix process model.
+These are not cosmetic compatibility features.
 
-POSIX compatibility is useful. It should not define the identity of the system.
+They are design ideas worth carrying forward.
+
+## What must change
+
+Some historical assumptions are no longer acceptable as system-wide invariants:
+
+- unrestricted shared kernel-visible pointers;
+- arbitrary supervisor entry;
+- global interrupt control by applications;
+- unrestricted physical-memory access;
+- unrestricted DMA;
+- one implicit address space;
+- weak fault containment;
+- security depending on every component behaving correctly.
+
+Nexus isolates those assumptions without declaring the Amiga programming model obsolete.
+
+## AROS first, Nexus underneath
+
+The intended relationship is:
+
+```
+applications
+    |
+AROS runtime
+Exec / DOS / Intuition / HIDD / m68kemu / ...
+    |
+stable Nexus contracts
+    |
+Nexus Executive
+CPU / memory / protection / IRQ / DMA / capabilities
+    |
+hardware
+```
+
+This is deliberately not a deep stack of compatibility personalities.
+
+Most of the operating system remains AROS.
+
+Nexus concentrates only the mechanisms that need stronger ownership and protection.
+
+## Compatibility should improve with upstream
+
+Current upstream AROS already contains an important example of the direction Nexus should follow.
+
+`m68kemu.library` transparently executes classic m68k software using:
+
+- contained m68k memory;
+- CPU emulation;
+- fake Amiga library bases;
+- LVO interception;
+- generated thunks;
+- generated shadow-structure translation;
+- forwarding to native AROS libraries.
+
+Nexus should not duplicate this with a fork-specific "Rosetta".
+
+It should help that upstream mechanism become faster, safer and more complete.
+
+The ideal long-term property is:
+
+> when AROS compatibility improves upstream, Nexus benefits automatically.
+
+## Generated adaptation instead of permanent glue
+
+AROS already has strong interface-generation traditions:
+
+- FD files;
+- `genmodule`;
+- module `.conf` files;
+- HIDD/OOP interface definitions;
+- m68k thunk generation;
+- structure-layout generation.
+
+Nexus should build on those.
+
+Where possible, one semantic interface description should drive:
+
+- direct native calls;
+- compatibility thunks;
+- validated service stubs;
+- optional isolated transports.
+
+This reduces the risk that Nexus becomes a second implementation that slowly drifts away from AROS.
 
 ## Modernity without cultural erasure
 
-Modernising AROS should not mean hiding Linux underneath a Workbench-like desktop.
-
-For Nexus, modernity means giving AROS native mechanisms for:
+Nexus aims to give AROS native mechanisms for:
 
 - x86-64 SMP;
 - ARM64;
 - RISC-V;
 - UEFI;
-- NVMe;
-- AHCI;
+- modern storage;
 - USB/xHCI;
 - IPv6;
-- modern graphics stacks;
+- current graphics stacks;
 - isolated address spaces;
-- protected drivers;
-- controlled DMA through IOMMU;
-- W^X;
-- ASLR;
-- recoverable services;
+- W^X and ASLR;
+- controlled device authority;
+- IOMMU-mediated DMA;
+- restartable services;
 - fault containment.
 
-The important part is that these mechanisms belong to AROS as architectural capabilities, not as an imported identity.
+Those mechanisms should belong to AROS as capabilities of the system, not as a foreign kernel hidden underneath a themed desktop.
 
-## Compatibility is a feature, not an obstacle
+## Selective isolation, not isolation theatre
 
-The historical ABI is not something Nexus intends to "clean up" until old software stops working.
+Not every function call needs IPC.
 
-It is a compatibility contract.
+Not every driver needs to be moved out of process immediately.
 
-Legacy software should be able to run inside a Legacy Cell with the semantics it expects. The surrounding Nexus system then limits the consequences of failures or unsafe assumptions.
+Nexus should be:
 
-This lets us say both:
+> local where trust and performance justify it; isolated where containment materially helps.
 
-> old software can keep behaving like old Amiga/AROS software
+A service may use a direct path today and an isolated path tomorrow while preserving one semantic contract.
 
-and:
+Claims about security remain evidence-based through the L0-L5 isolation model.
 
-> new software does not have to inherit every historical limitation.
+## A future-ready system
 
-That distinction is the foundation of the project.
+Nexus should also avoid making today's workload assumptions permanent.
 
-## Evolution, not a clean-room replacement
+AI and agent systems are one example.
 
-Nexus is deliberately being developed inside an AROS fork.
+The project will not put an LLM in the kernel.
 
-That is important.
+Instead it should provide general mechanisms that are useful whether AI is important or not:
 
-The intention is to reuse and strengthen existing AROS work wherever practical:
+- asynchronous services;
+- scoped capabilities;
+- shared MemoryObjects;
+- service discovery;
+- generic compute acceleration;
+- structured application automation.
 
-- kernel.resource;
-- Exec;
-- DOS;
-- HIDD;
-- Intuition;
-- Zune;
-- Wanderer;
-- AHI;
-- Poseidon;
-- AROSTCP;
-- current storage drivers;
-- current graphics work;
-- the existing toolchain and build system;
-- current x86-64, ARM64 and RISC-V work.
+This can eventually support AI agents safely while also strengthening normal scripting and application interoperability.
 
-The first question for every subsystem should be:
-
-> What can be preserved, wrapped, isolated or evolved?
-
-not:
-
-> What can be rewritten?
+The spiritual precedent is closer to message ports and ARexx than to embedding a chatbot into the desktop.
 
 ## Relationship with upstream AROS
 
-AROS-FraPo is currently an experimental fork.
+AROS-FraPo is an experimental fork.
 
-Nexus is not presented as an official AROS roadmap, and it is not intended to compete with or diminish the work of the AROS Development Team.
+Nexus is not an official AROS roadmap.
 
-The purpose of the fork is to provide enough freedom to test a deep architectural direction without destabilising upstream development.
+The project should remain constructive toward the AROS Development Team:
 
-The desired long-term relationship is constructive:
+- continuously inspect upstream;
+- keep `master` close to upstream;
+- prefer upstream code;
+- keep adapted diffs narrow;
+- contribute generally useful fixes upstream where practical;
+- avoid duplicate compatibility stacks;
+- revise Nexus when upstream provides a better solution.
 
-- keep the fork synchronisable with upstream;
-- avoid gratuitous code churn;
-- isolate experimental changes;
-- document architectural decisions;
-- measure compatibility;
-- contribute generally useful fixes upstream where appropriate;
-- invite technical criticism early.
+If Nexus becomes difficult to update from AROS, that is an architectural warning, not merely a Git problem.
 
-If parts of Nexus prove useful to upstream AROS, that would be a success.
+## What success looks like
 
-If some ideas are rejected after serious testing, documenting why they failed would also be useful.
+A successful Nexus should eventually make all of these statements true:
 
-## What success would look like
+- current AROS keeps evolving rather than being frozen as a guest;
+- classic Amiga software continues to become more compatible;
+- Exec remains central;
+- protected applications become possible;
+- faults can be contained selectively;
+- drivers can be isolated where worthwhile;
+- modern storage/network/graphics remain native AROS citizens;
+- x86-64, ARM64 and RISC-V share the same protection concepts;
+- large transfers remain efficient;
+- upstream updates remain manageable;
+- future automation and AI services can use explicit authority rather than global access;
+- the system remains small enough to reason about.
 
-A successful Nexus would eventually allow all of these statements to be true at the same time:
+The goal is not simply "AROS with memory protection".
 
-- classic AROS applications still run;
-- Wanderer still feels like AROS;
-- Exec concepts remain central;
-- one bad legacy application cannot destroy the whole machine;
-- one bad driver does not require a reboot;
-- native applications can have protected address spaces;
-- large data can still move zero-copy through explicit shared MemoryObjects;
-- SMP scales without redefining the whole OS as Unix;
-- modern storage and networking are native citizens;
-- x86-64, ARM64 and RISC-V share the same architectural model;
-- the system remains small enough to understand.
+The goal is:
 
-The final goal is not merely "AROS with memory protection".
+> **an AROS architecture capable of another generation of growth without losing the engineering culture that made Amiga systems distinctive.**
 
-The goal is an AROS that can grow for another generation without losing the reason people cared about Amiga-like systems in the first place.
+## Architecture must remain revisable
 
-## A project open to disagreement
+This vision is a direction, not a demand that every mechanism imagined in 2026 survive unchanged.
 
-This is an architectural proposal, not a declaration that every design decision is already correct.
+Fine tuning is expected.
 
-Nexus should earn its place through:
+Larger changes are acceptable when evidence requires them.
 
-- working code;
-- reproducible tests;
-- measurable compatibility;
-- small demonstrable milestones;
-- technical review;
-- willingness to revise assumptions.
+The project should be willing to:
 
-I would especially welcome discussion from people with experience in:
+- move a boundary;
+- remove an abstraction;
+- replace a mechanism;
+- adopt better upstream work;
+- reject an earlier Nexus idea.
 
-- AROS internals;
-- AmigaOS internals;
-- Exec and DOS;
-- MMU and x86-64;
-- ARM64 or RISC-V;
-- SMP;
-- device-driver architecture;
-- HIDD;
-- PCI/PCIe;
-- IOMMU and DMA;
-- graphics;
-- security;
-- compiler/runtime work.
+What should remain stable is the intent:
 
-The project exists because of enthusiasm for Amiga, but enthusiasm alone is not enough. The engineering has to stand up to scrutiny.
-
-## The principle I want to protect
-
-The simplest summary of Nexus is:
-
-> **Preserve the Amiga programming culture where it is valuable. Isolate the historical assumptions where they are dangerous. Build modern capabilities around both without turning AROS into something else.**
-
-That is the direction I intend to pursue.
+> **Preserve the strongest Amiga/AROS ideas. Modernize the mechanisms that limit them. Stay close enough to upstream that AROS and Nexus can grow together.**

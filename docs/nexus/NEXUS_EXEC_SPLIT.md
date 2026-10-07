@@ -1,16 +1,22 @@
 # Nexus / Exec Split
 
-> Status: architectural classification draft
+> Status: architectural classification baseline
 >
-> This document prevents a critical design mistake: treating the current `kernel.resource` API as though it were already the Nexus kernel API.
+> Current direction: ADR-0002 convergent architecture
 
-## 1. Current reality
+## 1. Purpose
 
-AROS already has a useful low-level boundary in `kernel.resource`.
+This document prevents two opposite mistakes:
 
-It contains or fronts mechanisms for:
+1. treating current `kernel.resource` as if it were already Nexus;
+2. creating a completely separate ExecNG/kernel stack and duplicating AROS.
 
-- scheduling;
+The target is a narrow mechanism/policy split inside the evolving AROS system.
+
+## 2. Current reality
+
+AROS already concentrates important low-level mechanisms in and around `kernel.resource`:
+
 - CPU contexts;
 - interrupts;
 - MMU mappings;
@@ -18,301 +24,299 @@ It contains or fronts mechanisms for:
 - CPU discovery;
 - spinlocks;
 - timers;
+- SMP/IPI support;
 - diagnostics.
 
-That makes it the best extraction seam available.
+That is valuable.
 
-It is **not**, however, a clean protection-kernel boundary today.
-
-Current native implementations still know about or call into:
+The same code also still depends on AROS/Exec concepts such as:
 
 - `SysBase`;
 - `struct Task`;
-- Exec ready/running/wait lists;
-- Exec soft interrupts;
-- Exec scheduler state;
-- ABI v1 supervisor semantics.
+- Exec ready/wait/running lists;
+- soft interrupts;
+- scheduler policy;
+- legacy privilege semantics.
 
-Nexus must therefore be extracted *through* this seam, not equated with it.
+Nexus must therefore be extracted *through* this area, not equated with it.
 
-## 2. Target layering
+## 3. Target relationship
 
-The intended layering is:
+The intended long-term shape is:
 
 ```
-ABI v1 applications
+AROS applications
        |
        v
-exec.library / dos.library
+Exec / DOS / AROS runtime
+       |
+       | AROS policy + compatibility
+       v
+thin Nexus adapters
+       |
+------- stable mechanism boundary -------
        |
        v
-Legacy kernel compatibility layer
-       |
-       | narrow privileged ABI
-       v
----------------- protection boundary ----------------
-       |
-       v
-Nexus
-  CPU / Thread / AddressSpace
-  MemoryObject / Capability
-  Endpoint / IRQ / Timer
-  Device / DMA / IOMMU
+Nexus Executive
+CPU / Thread / AddressSpace
+MemoryObject / Capability
+Endpoint / IRQ / Timer
+Device / DMA / IOMMU
        |
        v
 hardware
 ```
 
-For ABI v2:
+This is not a permanent compatibility personality stack.
 
-```
-ABI v2 runtime
-       |
-       v
-Nexus native interface
-```
+Exec remains the normal AROS runtime.
 
-## 3. Scheduling ownership
+## 4. Scheduling ownership
 
-### Legacy side owns
+### Exec owns policy
 
-- Exec `Task`;
-- task priorities as ABI v1 sees them;
-- Exec ready/wait/spin lists;
-- `Forbid()/Permit()`;
+Exec continues to define:
+
+- `struct Task`;
+- task priorities;
+- ready/wait/running lists;
 - signals;
 - message ports;
-- legacy scheduling policy.
+- `Forbid()/Permit()`;
+- ABI-visible scheduling semantics.
 
-### Nexus owns
+### Nexus owns machine scheduling mechanisms
+
+Nexus eventually owns:
 
 - physical CPUs;
-- protected threads;
-- Legacy Cell vCPU threads;
-- CPU-time allocation between domains;
-- preemption of a Cell regardless of `Forbid()`;
-- migration/affinity at the domain/vCPU level.
+- protected execution contexts;
+- address-space activation;
+- timer/preemption mechanism;
+- cross-domain scheduling authority;
+- CPU affinity/migration mechanisms required by protected contexts.
 
-Nexus must not walk Exec task lists to decide which protected domain runs next.
+Nexus should not need to walk Exec lists to understand its own protection objects.
 
-This is the key separation.
+The integration may initially preserve existing Exec scheduling code while extracting the lower-level CPU/context-switch machinery beneath it.
 
-## 4. Current kernel.resource API classification
+## 5. Current kernel.resource API classification
 
-The table below classifies *semantics*, not necessarily final public symbol names.
+The table classifies semantics, not final symbol names.
 
-| Current API family | Target classification | Notes |
+| Current API family | Convergent target | Notes |
 | --- | --- | --- |
-| `KrnDispatch/KrnSwitch/KrnSchedule` | Legacy kernel shim | Operate on Exec Tasks today; must not define Nexus scheduling |
-| `KrnSetScheduler/KrnGetScheduler` | Legacy shim / policy adapter | May configure Cell scheduler, not Nexus global policy directly |
-| `KrnScheduleCPU` | Split | Legacy requests vCPU attention; Nexus owns physical reschedule/IPI |
-| `KrnCause` | Legacy event shim | Soft-int semantics remain Cell-side |
-| `KrnCli/KrnSti` | Legacy virtual privilege | Must not expose physical IF control to an untrusted Cell |
-| `KrnIsSuper` | Legacy virtual privilege | Must report Cell-visible privilege, not unrestricted Nexus privilege |
-| IRQ add/remove/modify/allocate | Nexus-backed capability service | Ownership and routing must be validated |
-| `KrnGetBootInfo` | Read-only compatibility view | Do not expose mutable Nexus boot internals |
-| `KrnMapGlobal/KrnUnmapGlobal` | Split / restricted | Replace implicit global mapping with AddressSpace-targeted mapping |
-| `KrnSetProtection` | Nexus AddressSpace operation | Must include real R/W/X enforcement |
-| `KrnVirtualToPhysical` | Restricted compatibility operation | Physical addresses must not become general authority |
-| `KrnAllocPages/KrnFreePages` | Nexus memory primitive behind shim | Distinguish physical allocation from virtual mapping |
-| `KrnCreateContext/KrnDeleteContext` | Legacy CPU-context shim | Current context represents Exec Tasks; Nexus needs its own Thread object |
-| CPU count/number/mask APIs | Read-only or scheduler bridge | Physical topology belongs to Nexus; Cell may receive a virtual topology |
-| spinlock APIs | Utility / compatibility | Useful implementation primitive, not a security boundary |
-| clock-source registration | Nexus internal/service registration | Physical timer ownership is privileged |
-| `KrnExitInterrupt` | Nexus/arch internal | Must not be an ordinary Cell authority |
-| system/CPU attributes | Read-only capability-safe query | Filter privileged addresses/details where required |
-| debug/backtrace/format APIs | Diagnostic service | Must validate cross-domain memory access |
+| `KrnDispatch/KrnSwitch/KrnSchedule` | A-class adapter | Exec policy remains AROS-owned; low-level context/CPU mechanism may be extracted |
+| `KrnSetScheduler/KrnGetScheduler` | AROS policy | Do not turn legacy scheduler policy into Nexus global policy |
+| `KrnScheduleCPU` | Split | physical IPI/reschedule mechanism may be Nexus-owned; Exec intent remains AROS policy |
+| `KrnCause` | AROS event semantics | may later use Nexus event delivery underneath |
+| `KrnCli/KrnSti` | A-class privilege seam | direct physical IF control cannot cross into protected contexts |
+| `KrnIsSuper` | A-class privilege seam | protected execution needs explicit privilege ownership |
+| IRQ add/remove/modify/allocate | Split toward Nexus authority | AROS-facing semantics may remain while physical routing becomes Nexus-owned |
+| `KrnGetBootInfo` | Read-only AROS view | keep mutable Nexus internals private |
+| `KrnMapGlobal/KrnUnmapGlobal` | A-class MMU seam | converge toward explicit AddressSpace target internally |
+| `KrnSetProtection` | Nexus mechanism behind adapter | real R/W/X enforcement belongs below AROS policy |
+| `KrnVirtualToPhysical` | Restricted compatibility API | raw physical addresses must not become general authority |
+| `KrnAllocPages/KrnFreePages` | Split | distinguish physical-page authority from AROS allocation policy |
+| `KrnCreateContext/KrnDeleteContext` | A-class seam | separate CPU execution context from `struct Task` semantics |
+| CPU topology queries | Shared read-only service | physical topology comes from Nexus mechanism; AROS decides exposure/policy |
+| spinlock APIs | Shared implementation utility | not a security boundary |
+| clock-source registration | Split | physical timer mechanism versus AROS timer policy |
+| `KrnExitInterrupt` | architecture/Nexus internal | should not become ordinary application authority |
+| diagnostics/backtrace | Shared diagnostic facility | must validate cross-domain access when protection exists |
 
-## 5. APIs that must not cross unchanged
-
-Some current semantics are structurally incompatible with the protected model.
+## 6. APIs that should not become permanent protected contracts unchanged
 
 ### KrnMapGlobal
 
-"Global" currently means the shared runtime address space.
+"Global" reflects the current shared-address-space design.
 
-Nexus requires an explicit target:
+The internal protected form needs an explicit target AddressSpace.
 
-```
-Map(AddressSpaceHandle,
-    VirtualAddress,
-    MemoryObjectHandle,
-    Offset,
-    Length,
-    Rights)
-```
-
-Legacy `KrnMapGlobal()` may remain as a compatibility wrapper that maps only into the Cell's permitted address space.
+Legacy/public behaviour may remain through an adapter.
 
 ### KrnVirtualToPhysical
 
-A raw physical address is dangerous authority when combined with DMA or device programming.
+A physical address becomes dangerous when combined with MMIO or DMA authority.
 
-ABI v2 should normally use MemoryObjects and DMA handles instead.
+Protected APIs should prefer:
+
+- MemoryObject;
+- device resource;
+- DMA mapping handle.
 
 ### KrnCreateContext
 
-The current CPU context is tightly connected to Exec task dispatch.
+Current context creation is tied closely to Exec Task execution.
 
-Nexus Thread state must be independent of `struct Task`.
+A Nexus Thread/context mechanism must be explainable without `struct Task`.
 
 ### KrnCli/KrnSti
 
-These cannot mean physical CPU interrupt flag manipulation when called by a protected Cell.
+These may remain useful internally for trusted AROS/kernel code during convergence.
 
-## 6. Proposed internal Nexus object vocabulary
+They must not become unrestricted physical interrupt controls for future protected applications or isolated services.
 
-Nexus should converge around a small architecture-neutral object set.
+## 7. Nexus object vocabulary
+
+The low-level object set remains deliberately small.
 
 ### NexusCPU
 
-Represents a physical logical CPU known to Nexus.
+Physical logical CPU.
 
 ### NexusThread
 
-A schedulable protected execution context.
+Protected/machine-level execution context independent of Exec Task policy.
 
-Examples:
-
-- ABI v2 thread;
-- driver-service thread;
-- Legacy Cell vCPU.
-
-It contains CPU register state but no Exec `Task` semantics.
+An Exec Task may initially be backed by existing machinery and later by a NexusThread adapter where useful.
 
 ### NexusAddressSpace
 
-Owns a hardware translation context and its mapping metadata.
+Hardware translation/protection context.
 
 ### NexusMemoryObject
 
-Represents pages independent of any one virtual address.
+Shareable physical/logical memory object independent of one virtual address.
 
 ### NexusEndpoint
 
-Kernel-mediated IPC endpoint.
+Protected asynchronous communication endpoint.
 
 ### NexusCapability
 
-Authority to operate on another Nexus object.
+Explicit authority to operate on a Nexus object.
 
 ### NexusIRQ
 
-Validated ownership/subscription to an interrupt source.
+Physical/virtual interrupt authority.
 
 ### NexusTimer
 
-Kernel timer object independent of Exec timer.device semantics.
+Machine timer object.
 
 ### NexusDevice
 
-Authority over a device/function or a controlled portion of it.
+Authority over a device or hardware resource.
 
 ### NexusDMA
 
-DMA mapping/grant object backed by permitted MemoryObjects.
+Controlled device-memory mapping.
 
-## 7. What remains in legacy kernel compatibility
+## 8. No mandatory Legacy kernel layer
 
-Initially this layer may be substantial.
+Earlier Nexus drafts treated a "Legacy kernel compatibility layer" as a permanent layer beneath all of Exec.
 
-It is allowed to know:
+ADR-0002 changes that.
 
-- `SysBase`;
-- `struct Task`;
-- ETask;
-- Exec scheduler lists;
-- legacy nesting counts;
-- legacy interrupt-server structures;
-- ABI v1 CPU context format.
-
-Its job is to translate legacy intent into a much smaller Nexus interface.
-
-This layer is part of the Legacy Cell, not the Nexus TCB.
-
-## 8. Boot-time complication
-
-Current native AROS constructs `ExecBase` only after low-level MMU, GDT, TSS and IDT setup.
-
-This is favourable for Nexus extraction.
-
-The target order is:
+The convergent model prefers:
 
 ```
-bootstrap
-  |
-  v
-Nexus early init
-  |
-  +-- physical memory
-  +-- Nexus kernel AddressSpace
-  +-- traps/IRQ ownership
-  +-- first NexusThread
-  |
-  v
-create Legacy Cell
-  |
-  v
-legacy compatibility kernel
-  |
-  v
-krnPrepareExecBase()
-  |
-  v
-Exec
+Exec / AROS code
+      |
+small local adapter where needed
+      |
+Nexus mechanism
 ```
 
-The difficult part is not creating Exec later; it is ensuring that code used before Exec no longer depends on Exec-owned abstractions.
+Only code that actually crosses a protection boundary needs a strong translation boundary.
 
-## 9. Extraction rule
+This reduces:
 
-When touching current kernel code, classify every dependency.
+- layer count;
+- IPC;
+- duplicate scheduler logic;
+- maintenance burden.
 
-### Keep in Nexus
+## 9. Selective Legacy Cells
 
-Only if the code needs no ABI v1 concept to do its job.
+A Legacy Cell is still useful when a whole shared-pointer/privilege environment needs containment.
 
-### Move/retain in legacy layer
+Examples:
 
-If the code fundamentally reasons about Exec Tasks, lists, signals, softints or ABI v1 scheduler semantics.
+- unsafe historic software;
+- direct-hardware legacy code;
+- compatibility experiments;
+- isolated legacy service bundles.
 
-### Split
+In that case, the older compatibility-kernel reasoning still applies inside the Cell.
 
-If the mechanism is privileged but the policy/representation is legacy-specific.
+It is now a selective deployment mode rather than the architecture of normal AROS.
 
-Example:
+## 10. Extraction rule
 
-- Nexus: deliver virtual event to Legacy vCPU;
-- legacy layer: interpret that event as an Exec interrupt/softint.
+When touching current low-level code, classify each dependency.
 
-## 10. First implementation consequence
+### Nexus mechanism
 
-The first Nexus code should **not** begin by replacing `KrnSchedule()`.
+Keep/extract it below the stable boundary if it can be explained without AROS policy objects.
 
-The first safe extraction is:
+### AROS policy
 
-1. architecture-neutral `NexusAddressSpace` object;
-2. x86-64 page-table backend;
-3. explicit activation/CR3 ownership;
-4. protected fault classification;
-5. tiny NexusThread/payload;
-6. only then a Legacy Cell bootstrap.
+Keep it above the boundary if it fundamentally reasons about:
 
-That gives Nexus a real primitive that is not defined in terms of Exec.
+- Tasks;
+- Exec lists;
+- signals;
+- softints;
+- DOS;
+- application-visible ABI behaviour.
 
-## 11. Definition of a clean Nexus primitive
+### Adapter
 
-A primitive is considered Nexus-clean only if its implementation and public contract can be explained without referencing:
+Use a narrow adapter where the current function mixes both.
+
+The adapter is successful when it is smaller and more stable than duplicating the whole function or subsystem.
+
+## 11. U / A / N relation
+
+This document focuses mainly on A-class areas.
+
+- **U**: upstream-owned, little/no Nexus-specific change.
+- **A**: adapted through narrow mechanism/policy seams.
+- **N**: Nexus-owned substrate.
+
+`kernel.resource` and selected Exec internals are expected to be A-class during early convergence.
+
+See `UPSTREAM_INTEGRATION.md`.
+
+## 12. First implementation consequence
+
+The first Nexus code still should not begin by replacing Exec scheduling.
+
+The smallest safe path remains:
+
+1. explicit `NexusAddressSpace` representation around the current runtime MMU root;
+2. explicit internal target for map/protect operations;
+3. real protection semantics;
+4. domain-aware fault classification;
+5. second protected execution context;
+6. MemoryObject proof.
+
+The normal AROS runtime stays where it is.
+
+No full Legacy Cell migration is required.
+
+## 13. Definition of a clean Nexus mechanism
+
+A Nexus mechanism should be explainable without requiring the public contract to contain:
 
 - `struct Task`;
 - `ExecBase`;
 - DOS Process;
-- message ports;
-- signals;
-- Intuition;
+- message-port internals;
 - BOOPSI;
-- legacy library bases.
+- Wanderer;
+- legacy library-base internals.
 
-A compatibility wrapper may reference those concepts.
+An AROS adapter may reference those concepts.
 
-The primitive beneath it may not.
+The mechanism beneath it should not.
+
+## 14. Evolution rule
+
+This split is intentionally revisable.
+
+If upstream AROS later introduces a cleaner abstraction, Nexus should use it and remove local glue.
+
+If extraction creates more complexity than it removes, the boundary should be reconsidered through a new ADR rather than defended for historical reasons.

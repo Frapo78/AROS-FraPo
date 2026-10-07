@@ -40,6 +40,11 @@ jobs:
             docs/nexus/README.md
             docs/nexus/VISION.md
             docs/nexus/ARCHITECTURE.md
+            docs/nexus/adr/0002-convergent-aros-nexus-architecture.md
+            docs/nexus/AI_FOUNDATIONS.md
+            docs/nexus/UPSTREAM_INTEGRATION.md
+            docs/nexus/CONVERGENT_ARCHITECTURE.md
+            docs/nexus/CONVERGENCE_RISKS.md
             docs/nexus/ROADMAP.md
             docs/nexus/TRUST_MODEL.md
             docs/nexus/LEGACY_PRIVILEGE_MODEL.md

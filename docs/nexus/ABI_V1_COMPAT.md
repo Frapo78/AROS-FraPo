@@ -1,105 +1,186 @@
 # Nexus ABI v1 Compatibility Contract
 
-This document defines what Nexus must preserve while introducing modern isolation.
+This document defines what Nexus must preserve while introducing modern protection.
 
 ## Purpose
 
-The legacy ABI is not an implementation detail. It is an explicit compatibility domain.
+ABI v1 is not an implementation detail.
 
-Nexus may change where and how ABI v1 executes, but must not silently change the semantics that existing software reasonably depends on.
+It is a compatibility contract carried by the normal AROS runtime.
+
+Nexus may change how low-level machine mechanisms are implemented, but it must not silently invalidate semantics that existing AROS software reasonably depends on.
+
+ADR-0002 changes one earlier assumption:
+
+> ABI v1 is no longer defined as living primarily inside a mandatory Legacy Cell.
+
+The ordinary AROS runtime remains the primary ABI v1 environment.
+
+Legacy Cells remain available selectively when stronger containment is worth the compatibility cost.
 
 ## Preserved concepts
 
-Within a Legacy Cell, preserve:
+AROS ABI v1 should continue to preserve, within its supported compatibility scope:
 
 - Exec Task behaviour;
 - DOS Process behaviour;
-- message ports and message ownership rules;
-- signal allocation and delivery semantics;
+- message ports and ownership rules;
+- signal allocation and delivery;
 - library/device/resource lookup;
-- library bases and expected ABI conventions;
+- library bases and calling conventions;
 - TagItem conventions;
-- IORequest asynchronous I/O model;
-- BOOPSI object behaviour;
-- Intuition application-visible semantics;
-- Zune/MUI application-visible semantics;
-- legacy shared-memory assumptions required by supported software;
-- `Forbid()/Permit()` semantics as observed by code inside the cell;
-- `Disable()/Enable()` semantics only to the degree necessary for the legacy environment, never as authority over Nexus itself.
+- IORequest asynchronous I/O;
+- BOOPSI semantics;
+- Intuition application-visible behaviour;
+- Zune/MUI application-visible behaviour;
+- shared-memory assumptions required by supported software;
+- `Forbid()/Permit()` application-visible semantics;
+- historical library/device ABI layout where binary compatibility requires it.
 
-## Explicitly not guaranteed outside a Legacy Cell
+## Shared memory is compatibility, not global authority
 
-The following do not cross a protection boundary:
+ABI v1 may continue to use raw pointers inside the normal shared AROS execution environment.
+
+That does not mean a raw pointer gains authority across a protected Nexus boundary.
+
+When crossing into:
+
+- a protected process;
+- an isolated service;
+- an isolated driver;
+- a Legacy Cell;
+- Nexus itself;
+
+the bridge must use a safe representation such as:
+
+- handle/capability;
+- MemoryObject;
+- copied/validated value;
+- generated ABI bridge.
+
+## Explicitly not guaranteed across protected boundaries
+
+The following do not cross a Nexus protection boundary as implicit authority:
 
 - arbitrary virtual pointers;
-- private Exec internal structures;
-- direct kernel structures;
-- direct interrupt-controller access;
-- direct page-table access;
-- unrestricted PCI configuration access;
+- private Exec structures;
+- raw kernel structures;
+- page-table pointers;
 - unrestricted physical addresses;
-- unrestricted DMA addresses.
+- unrestricted MMIO;
+- unrestricted PCI configuration;
+- unrestricted DMA targets;
+- arbitrary supervisor entry points.
 
-A bridge must convert these into a Nexus-safe representation.
+## Compatibility modes
+
+The architecture recognizes several practical modes.
+
+### Mode A — normal ABI v1
+
+Existing AROS software runs in the ordinary AROS runtime.
+
+This remains the default compatibility path.
+
+### Mode B — adapted service boundary
+
+Software remains ABI v1, but selected calls are implemented through a Nexus adapter or isolated service.
+
+The semantic API remains as compatible as practical.
+
+### Mode C — selective Legacy Cell
+
+A risky or unusually privileged legacy component runs in a contained shared-pointer environment.
+
+The Cell preserves the historical assumptions internally while limiting machine authority externally.
+
+### Mode D — protected AROS application
+
+Software adopts protected execution APIs while remaining part of AROS.
+
+The exact public protected ABI is intentionally not frozen yet.
+
+### Mode E — m68k compatibility
+
+Classic Amiga m68k software runs through upstream `m68kemu.library` or its future upstream-compatible evolution.
 
 ## Compatibility levels
 
-### Level A — binary compatibility
+Separately from execution mode, changes can be classified by compatibility result.
 
-Executable runs without recompilation in an appropriate Legacy Cell.
+### Level A — binary compatible
 
-### Level B — source compatibility
+Runs without recompilation in the relevant supported environment.
 
-Source recompiles for ABI v1 without architectural changes.
+### Level B — source compatible
 
-### Level C — bridge compatibility
+Recompiles without architectural redesign.
 
-Source remains conceptually compatible but selected services cross a Nexus proxy.
+### Level C — bridge compatible
 
-### Level D — native migration
+The public concept remains compatible while selected operations cross a generated/validated bridge.
 
-Application is ported to ABI v2 and gains per-process isolation.
+### Level D — migration required
 
-The project must identify which level a change affects.
+Software must adopt a new protected or service API to gain a property that cannot coexist with the old contract.
 
 ## Forbidden shortcuts
 
 Nexus development must not:
 
-- change legacy structure layout merely to simplify the protected kernel;
-- change LVO numbering as part of Nexus work;
-- reinterpret an existing ABI v1 pointer as a global Nexus pointer;
+- change legacy structure layout merely to simplify Nexus;
+- renumber LVOs as a Nexus convenience;
+- reinterpret an ABI v1 pointer as a globally trusted Nexus pointer;
 - require every legacy application to adopt handles;
-- make a legacy application privileged merely to retain compatibility;
-- expose Nexus physical-memory addresses through legacy interfaces unless an explicit, audited compatibility mechanism requires it.
+- grant real Nexus privilege merely to preserve a historical API;
+- fork a large upstream compatibility subsystem when a narrow adapter would work;
+- create a parallel m68k compatibility stack without strong evidence.
+
+## m68k compatibility
+
+Upstream AROS `m68kemu.library` is part of the compatibility strategy.
+
+Its current design already demonstrates useful principles:
+
+- contained m68k address space;
+- fake Amiga library bases;
+- LVO interception;
+- generated thunk coverage;
+- generated structure-layout translation;
+- forwarding to native AROS libraries.
+
+Nexus should consume and strengthen this work rather than duplicate it.
 
 ## Compatibility testing
 
-The initial test corpus should include:
+The corpus should cover:
 
-- Exec task/message/signal tests;
-- DOS process and file tests;
-- Intuition applications;
-- Zune/MUI applications;
+- Exec task/message/signal behaviour;
+- DOS process and filesystem behaviour;
+- Intuition;
+- Zune/MUI;
 - Wanderer startup;
 - AHI;
 - network applications;
 - storage I/O;
-- representative software that exchanges pointers through classic interfaces.
+- pointer-sharing legacy applications;
+- m68k applications through upstream m68kemu;
+- direct versus adapted service paths where both exist.
 
-Every Legacy Cell milestone must compare behaviour against the baseline build.
+Every protection milestone compares against the recorded AROS baseline.
 
-## Compatibility vs containment
+## Compatibility versus containment
 
-Compatibility applies *inside* the Legacy Cell.
+Compatibility and containment remain different properties.
 
-Containment applies *outside* it.
+The project may preserve shared-pointer ABI v1 semantics while adding protected boundaries elsewhere.
 
-If a legacy application corrupts shared structures inside its own cell, Nexus is not required to save that cell. Nexus is required to prevent that corruption from becoming arbitrary access to:
+When a Legacy Cell is used, corruption inside that Cell need not be recoverable.
 
-- another Legacy Cell;
-- a protected process;
-- an isolated driver;
-- Nexus itself.
+When normal ABI v1 runs outside a Cell, its historical shared-memory risks remain part of that execution mode until stronger protection is introduced.
 
-This distinction is foundational.
+The project must state the actual isolation level rather than imply that ABI compatibility alone provides containment.
+
+## Core rule
+
+> Preserve ABI v1 where compatibility requires it; introduce protection around explicit boundaries instead of pretending shared pointers are safe everywhere.

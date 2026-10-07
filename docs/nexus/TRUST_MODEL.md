@@ -20,7 +20,7 @@ A system may protect one process from an accidental pointer bug while still allo
 
 Nexus therefore describes isolation as a set of independently measurable properties.
 
-No milestone may claim "the Legacy Cell is isolated" without stating which properties are actually enforced.
+No milestone may claim that a Legacy Cell, protected process, service domain, or the normal ABI v1 runtime is isolated without stating which properties are actually enforced.
 
 ## 2. Trusted Computing Base
 
@@ -51,19 +51,34 @@ Some components may temporarily remain trusted during migration:
 
 Every temporary trusted component must be recorded as technical debt rather than silently treated as part of the final design.
 
-### Not trusted by Nexus
+### Intended to become untrusted across explicit Nexus boundaries
 
-- ABI v1 applications;
-- ABI v2 applications;
-- POSIX applications;
+- protected AROS applications;
+- protected service domains;
 - Legacy Cells;
-- driver domains;
-- network stacks;
-- filesystems where isolation is available;
-- desktop services;
-- GUI applications.
+- isolated driver domains;
+- network/filesystem services where isolated;
+- future AI/automation agents;
+- POSIX applications when running protected.
 
-A component may be trusted by another service while still being untrusted by Nexus.
+### Transitional compatibility trust domain
+
+The ordinary ABI v1 AROS shared-memory runtime is a **Compatibility Trust Domain (CTD)** during convergence.
+
+Until real privilege separation is established for that runtime, Nexus must not pretend that a hostile ABI v1 task is fully untrusted relative to the machine.
+
+The CTD may still contain historical authority such as:
+
+- shared writable system structures;
+- supervisor APIs;
+- direct interrupt control;
+- direct hardware access.
+
+As each machine mechanism is extracted beneath Nexus, that authority is reduced.
+
+This distinction prevents the architecture from overstating security during migration.
+
+A component may be trusted in one deployment mode and untrusted in another.
 
 ## 3. Primary threat classes
 
@@ -99,23 +114,27 @@ Validation rejects the operation or terminates the offending process/domain.
 
 ### T3 — deliberately hostile ABI v1 application
 
-A legacy application is allowed to exploit the shared-memory assumptions inside its own Legacy Cell.
+This threat has two deployment states.
 
-It must not be allowed to turn those historical assumptions into arbitrary Nexus authority.
+#### Transitional normal ABI v1 runtime
 
-A hostile legacy application may therefore compromise:
+While ABI v1 executes inside the ordinary shared Compatibility Trust Domain and still retains direct machine privilege, a hostile ABI v1 application may be able to compromise the whole CTD and potentially machine state.
 
-- itself;
-- other software in the same Legacy Cell;
-- shared ABI v1 state in that cell.
+Nexus must **not** claim containment that has not yet been implemented.
 
-It must not thereby compromise:
+The convergence roadmap progressively removes this authority.
+
+#### Selective Legacy Cell / protected compatibility domain
+
+When ABI v1 software executes inside an explicitly protected compatibility domain, it may compromise shared legacy state inside that domain but must not thereby compromise:
 
 - Nexus;
-- another Legacy Cell;
-- an ABI v2 process;
-- an isolated driver domain;
+- another protected domain;
+- an isolated driver;
+- unrelated protected applications;
 - arbitrary physical memory.
+
+The threat claim therefore depends on the actual deployment and demonstrated L0-L5 level.
 
 ### T4 — faulty or hostile driver
 
@@ -142,7 +161,7 @@ The long-term goal is to keep parsers and large protocol stacks outside the Nexu
 
 ## 4. Denial of service
 
-Nexus aims to prevent a Legacy Cell or protected process from trivially freezing the whole machine through historical APIs.
+Nexus aims to prevent an explicitly protected domain from trivially freezing the whole machine through historical APIs. The normal ABI v1 Compatibility Trust Domain reaches this property only as privilege mechanisms are extracted and mediated.
 
 Examples:
 
@@ -169,11 +188,13 @@ are later hardening work.
 
 Nexus uses explicit isolation levels so prototypes cannot overstate their security.
 
-### L0 — Compatibility containment
+### L0 — Compatibility-domain classification
 
-ABI v1 execution is conceptually separated from Nexus, but no hardware memory boundary is yet proven.
+The compatibility trust boundary is identified, but hardware protection is not yet proven.
 
-Useful for architecture work only.
+For the normal ABI v1 runtime, L0 may still mean a trusted shared world with historical machine authority.
+
+For a Legacy Cell prototype, L0 may mean conceptual containment without a proven hardware boundary.
 
 ### L1 — CPU memory isolation
 
@@ -279,19 +300,20 @@ A fatal Cell-level protection violation must:
 - free or quarantine Cell memory;
 - keep Nexus alive.
 
-## 8. Legacy shared-memory limitation
+## 8. ABI v1 shared-memory limitation
 
-Nexus cannot provide per-application memory isolation *inside* a conventional ABI v1 Legacy Cell without breaking software that depends on shared pointers.
+Nexus cannot transparently give every existing ABI v1 task a separate address space while preserving arbitrary pointer-sharing semantics.
 
 That is intentional.
 
-Applications requiring stronger isolation may eventually run in:
+The convergent architecture therefore permits several modes:
 
-- a separate Legacy Cell;
-- an ABI v2 process;
-- a compatibility sandbox.
+- normal ABI v1 inside the shared Compatibility Trust Domain;
+- protected AROS applications using explicit Nexus boundaries;
+- selective Legacy Cells for risky legacy software;
+- adapted/generated service boundaries.
 
-This is not considered a failure of the architecture. It is the explicit boundary between compatibility and protection.
+Strong isolation is added where the contract permits it rather than being falsely claimed for all ABI v1 software at once.
 
 ## 9. Hardware without an IOMMU
 

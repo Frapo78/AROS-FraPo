@@ -104,27 +104,27 @@ Contains:
 
 It does not implicitly inherit arbitrary Nexus mappings as user-accessible memory.
 
-### Legacy Cell address space
+### AROS compatibility address space
 
-Contains:
+The initial convergent system may keep the normal ABI v1 AROS shared-memory world in its existing runtime address space while low-level ownership is extracted.
 
-- the ABI v1 shared-memory world for that Cell;
-- Exec;
-- DOS;
-- libraries;
-- legacy application memory;
-- compatibility data;
-- explicitly granted shared service buffers.
+This is a Compatibility Trust Domain, not automatically a security boundary.
 
-All tasks inside one conventional Legacy Cell share this address space.
+### Selective Legacy Cell address space
+
+When a Legacy Cell is used, it contains the ABI v1 shared-memory world assigned to that Cell and explicitly granted shared/service buffers.
+
+All tasks inside one conventional Legacy Cell share that address space.
 
 ## 6. Initial virtual-layout policy
 
 The MVP should avoid an unnecessary full relink of AROS.
 
-Therefore it may preserve existing ABI-visible virtual addresses inside the first Legacy Cell where compatibility requires them.
+Therefore AS0/AS1 preserve the existing ABI-visible virtual layout of the normal AROS runtime.
 
-That does **not** imply that Nexus must share those mappings.
+A later protected process or selective Legacy Cell may preserve compatible virtual addresses where necessary.
+
+That does **not** imply that Nexus must grant the same protection or authority to every address space.
 
 The first target is:
 
@@ -143,7 +143,7 @@ A future high-half or otherwise redesigned Nexus virtual layout is possible, but
 
 ## 7. Page-table memory ownership
 
-Page tables that enforce Nexus protection must not depend on ordinary Legacy Cell `AllocMem()`.
+Page tables that enforce a protected Nexus boundary must not remain controllable by the ordinary AROS Compatibility Trust Domain allocator.
 
 Long-term rule:
 
@@ -151,7 +151,7 @@ Long-term rule:
 
 The early prototype may wrap current allocation code while bootstrapping the split, but this dependency must be removed before L1 isolation is claimed.
 
-Otherwise a Cell capable of corrupting its allocator could potentially corrupt the structures enforcing its isolation.
+Otherwise corruption in the compatibility allocator could corrupt the very structures enforcing a protected boundary.
 
 ## 8. Mapping API
 
@@ -238,7 +238,7 @@ Such mappings must be:
 - diagnosable;
 - excluded from claims of strict W^X for that Cell.
 
-ABI v2 software should not receive WX by default.
+Protected AROS software should not receive WX by default.
 
 ## 11. Bootstrap mappings
 
@@ -285,15 +285,15 @@ Responsibilities:
 
 Legacy Exec task switches inside one Legacy Cell do **not** need a CR3 change.
 
-A Nexus switch between:
+A Nexus switch between different protected AddressSpaces may require one.
 
-- Legacy Cell vCPU;
-- ABI v2 process;
-- driver domain;
+Examples include:
 
-may require one.
+- protected AROS process;
+- selective Legacy Cell;
+- isolated driver/service domain.
 
-This is one reason hierarchical scheduling is useful.
+Normal Exec Task switches inside one shared compatibility AddressSpace need not change CR3.
 
 ## 13. TLB model
 
@@ -361,7 +361,7 @@ Fault in Nexus privileged code:
 - capture diagnostics;
 - panic unless an explicitly recoverable kernel mechanism owns the fault.
 
-### ABI v2 protected process
+### Protected AROS process/domain
 
 Fault:
 
@@ -369,15 +369,11 @@ Fault:
 - terminate or deliver a defined protected-runtime exception;
 - keep Nexus running.
 
-### Legacy Cell
+### Compatibility Trust Domain / Legacy Cell
 
-The handler distinguishes:
+For the normal transitional AROS CTD, existing trap behaviour may remain until a stronger boundary is introduced; no containment claim is made beyond the proven level.
 
-- legacy trap compatible with ABI behaviour;
-- valid demand/managed mapping event if later supported;
-- fatal Cell protection violation.
-
-A fatal Cell violation terminates the Cell rather than the machine.
+For a selective Legacy Cell, the handler distinguishes compatible legacy traps from boundary violations. A fatal Cell protection violation terminates the Cell rather than Nexus.
 
 ## 16. Legacy trap forwarding
 
@@ -475,7 +471,7 @@ A fault in the second AddressSpace is contained without system halt.
 
 Map explicit shared pages into two protected spaces with different rights.
 
-Only after AS0-AS5 should the first Legacy Cell migration begin.
+AS0-AS5 establish the substrate required for protected AROS execution. A selective Legacy Cell may be introduced later only when a concrete compatibility case justifies it.
 
 ## 21. MVP non-goals
 
@@ -499,7 +495,7 @@ P1.1 is complete when:
 
 - the existing x86-64 AROS boot uses an explicit `NexusAddressSpace` representation;
 - CR3 ownership has one documented internal path;
-- existing `KrnMapGlobal/KrnSetProtection` behaviour is preserved through compatibility wrappers;
+- existing `KrnMapGlobal/KrnSetProtection` behaviour is preserved for the normal AROS runtime while internal target ownership becomes explicit;
 - no ABI v1 structure layout changes;
 - reference AROS reaches Wanderer;
 - the change is small enough to review independently of later multi-address-space work.

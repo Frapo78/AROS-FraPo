@@ -16,6 +16,14 @@ Nexus must always be able to answer:
 
 The fork remains active while upstream AROS continues to change. A documented baseline prevents boot results, regressions and architectural conclusions from becoming ambiguous.
 
+## Tracking note
+
+The fork's upstream-tracking `master` has advanced to `6c1e40647f1bc58cd6986a5050563f2112c17329`.
+
+The reproducible implementation baseline below remains intentionally pinned to the earlier reviewed commit until G1/G2 build and boot evidence is repeated and the baseline is explicitly advanced.
+
+This distinction is deliberate: **tracking head is not the same as tested baseline**.
+
 ## Current baseline
 
 The first implementation baseline is:

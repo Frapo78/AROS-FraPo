@@ -4,7 +4,7 @@
 
 Nexus is motivated by a deep passion for Amiga and by the belief that the ideas behind Exec, message ports, libraries/devices/resources, Intuition and the lightweight Amiga programming model still deserve a future on modern hardware.
 
-The project asks whether AROS can preserve that character while gaining strong memory isolation, SMP scalability, protected drivers, modern DMA/IOMMU handling and a coherent path across x86-64, ARM64 and RISC-V.
+The project asks whether AROS can preserve that character while progressively extracting a small modern Nexus executive beneath the existing runtime: stronger memory isolation, SMP scalability, selective service/driver containment, modern DMA/IOMMU handling and a coherent path across x86-64, ARM64 and RISC-V.
 
 This is **not an official AROS roadmap** and it is not an attempt to turn AROS into a Unix-like operating system. It is an experimental fork intended to test a deep architectural direction in working code while remaining respectful of and synchronisable with upstream AROS.
 
@@ -12,6 +12,8 @@ This is **not an official AROS roadmap** and it is not an attempt to turn AROS i
 - [Nexus Vision](docs/nexus/VISION.md)
 - [Nexus overview](docs/nexus/README.md)
 - [Architecture](docs/nexus/ARCHITECTURE.md)
+- [Convergent Architecture](docs/nexus/CONVERGENT_ARCHITECTURE.md)
+- [ADR-0002](docs/nexus/adr/0002-convergent-aros-nexus-architecture.md)
 - [Roadmap](docs/nexus/ROADMAP.md)
 - [Community and participation](docs/nexus/COMMUNITY.md)
 
