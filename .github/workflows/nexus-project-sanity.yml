@@ -63,6 +63,7 @@ jobs:
             scripts/nexus/baseline/build-x86_64.sh
             scripts/nexus/baseline/run-qemu-x86_64.sh
             scripts/nexus/baseline/record-wanderer-result.sh
+            scripts/nexus/baseline/selftest.sh
           )
           for file in "${required[@]}"; do
             test -f "$file" || {
@@ -124,6 +125,12 @@ jobs:
             echo "Checking $script"
             bash -n "$script"
           done < <(find scripts/nexus -type f -name '*.sh' -print0)
+
+      - name: Run Nexus baseline harness self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/nexus/baseline/selftest.sh
 
       - name: Check Nexus process references
         shell: bash
