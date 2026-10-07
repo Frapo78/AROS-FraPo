@@ -2,19 +2,16 @@
 
 ## Objective
 
-Prove the Nexus protection substrate independently, then use it to run the existing AROS x86-64 ABI v1 environment as a Legacy Cell.
+Prove that Nexus mechanisms can be extracted beneath the existing AROS runtime without first moving AROS into a permanent compatibility container.
 
-The MVP is intentionally staged.
+The MVP is intentionally conservative:
 
-It must not begin by redesigning:
+- keep AROS booting normally;
+- preserve ABI v1 behaviour;
+- extract one machine mechanism at a time;
+- add protection only after the seam is reproducible.
 
-- Exec;
-- DOS;
-- Intuition;
-- Wanderer;
-- POSIX.
-
-The first job is to establish machine ownership and a measurable protection boundary.
+The governing direction is ADR-0002.
 
 ## Reference environment
 
@@ -22,296 +19,188 @@ Initial target:
 
 - architecture: x86-64;
 - machine: QEMU;
-- firmware/boot: simplest current AROS x86-64 path;
-- CPU: one Nexus CPU first, SMP later;
-- storage: reference virtual storage before physical-driver isolation;
-- graphics: existing AROS path during early compatibility work.
+- one CPU first, SMP later;
+- normal AROS boot/runtime path;
+- current upstream-compatible graphics/storage path.
 
-QEMU is the reference because repeatability matters more than hardware breadth during architecture proof.
-
-The exact upstream source baseline is recorded in `BASELINE.md`.
+The exact reproducible source baseline is recorded in `BASELINE.md`.
 
 ## Pre-implementation gates
 
 Before the first MMU refactor:
 
-1. current x86-64 AROS must build reproducibly;
-2. the reference VM must reach Wanderer;
-3. privilege paths must be classified;
-4. kernel.resource / Exec coupling must be inventoried;
-5. NX/W^X/page-table/TLB behaviour must be known;
-6. a low-level test/boot gate must exist.
+1. x86-64 AROS builds reproducibly;
+2. the reference VM reaches Wanderer;
+3. privilege paths are classified;
+4. kernel.resource / Exec coupling is inventoried;
+5. NX/W^X/page-table/TLB behaviour is known;
+6. G1/G2 build and QEMU gates exist;
+7. the touched subsystem has been compared with current upstream;
+8. its U/A/N ownership is understood.
 
-These are Phase 0 requirements, not optional documentation work.
+## Step A — map existing ownership
 
-## Step A — map the current boot chain
+Maintain the x86-64 boot map from loader through Wanderer.
 
-Document exact control and ownership flow for:
+For each low-level step distinguish:
 
-1. loader/bootstrap;
-2. page-table ownership;
-3. `kernel.resource`;
-4. `exec.library` initialization;
-5. resident/module initialization;
-6. DOS startup;
-7. graphics/Intuition startup;
-8. Wanderer launch.
-
-Deliverable:
-
-`docs/nexus/X86_64_BOOT_MAP.md`
+- AROS policy;
+- machine mechanism;
+- current shared implementation.
 
 ## Step B — AddressSpace representation with no behaviour change
 
-Introduce only the first clean Nexus primitive:
-
-- `NexusAddressSpace`.
-
-Initially it represents the current runtime MMU root.
+Introduce `NexusAddressSpace` around the current runtime MMU root.
 
 Requirements:
 
-- existing AROS virtual layout remains unchanged;
-- existing ABI v1 behaviour remains unchanged;
-- current boot still reaches Wanderer;
-- CR3 ownership becomes explicit internally;
-- map/unmap/protect code receives an explicit AddressSpace target internally.
+- existing AROS virtual layout unchanged;
+- current ABI unchanged;
+- normal AROS boot reaches Wanderer;
+- ordinary runtime CR3 ownership becomes explicit;
+- internal map/protect operations gain an explicit AddressSpace target.
 
-This is **AS0/AS1** from `ADDRESS_SPACE_MODEL.md`.
+This proves a seam, not isolation.
 
-It does not yet prove isolation.
+## Step C — real page protection
 
-## Step C — real executable protection and fault ownership
+Add separately reviewable protection semantics:
 
-Before running a second protected address space:
+- NX where supported;
+- supervisor write protection where compatible;
+- explicit R/W/X;
+- observable failure when protection cannot be applied.
 
-- enable/use real x86-64 NX where supported;
-- make EXECUTE an enforced mapping right;
-- default protected writable memory to NX;
-- introduce domain-aware fault classification;
-- distinguish Nexus faults from protected-domain faults.
+Do not combine this with a large scheduler or Exec rewrite.
 
-Mandatory test:
+## Step D — domain-aware faults
 
-A deliberate protected-domain protection fault produces diagnostics and returns control to Nexus instead of halting the entire machine.
+Classify faults before forwarding them into higher-level AROS semantics.
 
-## Step D — second protected address space
+A controlled protected-context fault must produce diagnostics without halting Nexus/the whole machine.
 
-Create a tiny controlled test payload with:
+## Step E — second protected context
 
-- private code;
-- private data;
-- private stack;
-- separate hardware page-table root.
+Create a tiny test execution context with:
 
-Nexus must:
+- private AddressSpace;
+- private code/data/stack;
+- Nexus-owned activation path.
 
-- activate the root through its own CR3 path;
-- return safely to the original address space;
-- prevent cross-space private-memory access;
-- perform correct TLB invalidation.
+Prove:
 
-Success means:
+- private memory is inaccessible from the wrong space;
+- the fault is contained;
+- L1 CPU memory isolation is real for the tested configuration.
 
-> **L1 CPU memory isolation has been demonstrated.**
+## Step F — explicit shared memory
 
-It does not yet mean hardware or DMA isolation.
+Introduce the minimum `MemoryObject` mechanism.
 
-## Step E — explicit sharing and IPC
+Map the same object intentionally into two protected contexts with different rights.
 
-Only after private memory works, introduce the minimum additional primitives needed for a meaningful protected-domain test:
+This proves that protection and zero-copy sharing can coexist.
 
-- `NexusMemoryObject`;
-- `NexusEndpoint`;
-- `NexusCapability`;
-- minimum `NexusThread` state required by protected execution.
+## Step G — first generated contract experiment
 
-Two protected contexts must:
+Before building a broad IPC/service framework, select one small AROS interface and test the generator-first strategy.
 
-- exchange a validated message;
-- explicitly share one MemoryObject;
-- map it with different permissions;
-- fail to access each other's non-shared pages;
-- reject invalid/fabricated authority.
+Goal:
 
-This proves that isolation does not require abandoning efficient shared memory.
+```
+existing AROS interface description
+        |
+        +--> direct stub
+        +--> validation metadata
+        +--> optional Nexus proxy
+```
 
-## Step F — Legacy Cell bootstrap contract
+Avoid complex graphics/storage callback interfaces for the first proof.
 
-Define a descriptor describing:
+## Step H — protected AROS application proof
 
-- Cell entry point;
-- ABI v1 virtual-memory layout;
-- boot arguments;
-- Legacy vCPU count;
-- granted MemoryObjects;
-- service endpoints;
-- virtual IRQ channels;
-- permitted compatibility operations.
+Add protected execution as an AROS capability.
 
-The Cell is not allowed to convert descriptor contents into arbitrary Nexus authority.
+A small AROS program should be able to:
 
-## Step G — legacy privilege virtualization
+- run in a protected AddressSpace;
+- call selected AROS services through validated adapters;
+- coexist with normal ABI v1 software;
+- appear as part of the same AROS system.
 
-Before calling the Cell privilege-isolated, implement the required semantics from `LEGACY_PRIVILEGE_MODEL.md`.
+The exact public ABI remains experimental until this proof exists.
 
-At minimum:
+## Step I — selective service isolation
 
-- arbitrary `Supervisor()` cannot jump into Nexus ring 0;
-- `SuperState()/UserState()` expose only Cell-compatible state;
-- `Disable()/Enable()` operate on virtual interrupt delivery;
-- `Forbid()/Permit()` remain Exec-local;
-- CR3/IDT/APIC ownership remains Nexus-only.
+Choose a component where isolation has measurable value.
 
-Success target:
+Prove:
 
-> **L2 privilege isolation** for the tested Cell configuration.
+- direct path remains available;
+- isolated path uses the same semantic contract;
+- failure can be contained/restarted;
+- overhead is measured.
 
-## Step H — bootstrap existing Exec/DOS inside the Cell
+## Legacy Cell rule
 
-Initial strategy:
+A full Legacy Cell is **not** a prerequisite for the normal MVP.
 
-- retain ABI v1 shared-memory layout inside the Cell;
-- keep Exec and DOS largely unchanged;
-- keep the current Exec scheduler inside the Cell;
-- provide one NexusThread per Legacy vCPU;
-- route machine privilege through the Legacy compatibility layer.
+Use one only when a concrete compatibility case requires containing a shared-pointer/legacy-privilege environment as a unit.
 
-Success ladder:
+If introduced, its own privilege and isolation requirements remain governed by:
 
-1. Cell entry;
-2. ExecBase creation;
-3. Exec task switching;
-4. DOS initialization;
-5. Initial CLI;
-6. filesystem/service availability;
-7. graphics/Intuition initialization;
-8. Wanderer desktop.
+- `LEGACY_PRIVILEGE_MODEL.md`;
+- `TRUST_MODEL.md`;
+- ADR-0001 invariants as refined by ADR-0002.
 
-Each rung must have a stable, diagnosable checkpoint.
+## m68k rule
 
-## Wanderer is a compatibility proof, not a security level
+Do not build a parallel Nexus m68k translator during the MVP.
 
-A usable Wanderer inside the Cell is a major result.
+Use upstream `m68kemu.library` as the primary compatibility path.
 
-It must not be described as "fully isolated" if the transitional configuration still permits legacy drivers to control:
+Changes should preferably improve or extend that contract rather than create a second launcher/runtime.
 
-- arbitrary MMIO;
-- PCI configuration;
-- physical IRQs;
-- bus-master DMA.
+## Performance rule
 
-Report the actual isolation level.
+Do not introduce an IPC crossing merely because Nexus has an Endpoint primitive.
 
-For example:
+Prefer direct execution until a protection boundary gives a measurable benefit.
 
-- CPU + privilege boundary working, direct legacy DMA still present → L2;
-- hardware ownership mediated → L3;
-- IOMMU-controlled DMA → L4.
+Use MemoryObjects and batching for large/high-frequency data.
 
-## Step I — prove containment
+## Hardware stop rule
 
-Mandatory destructive tests should eventually include:
+When the next claim depends on real:
 
-1. write outside a Cell mapping;
-2. execute from an NX mapping;
-3. attempt unsupported machine privilege;
-4. corrupt a sacrificial Cell-owned page;
-5. kill the Legacy Cell;
-6. relaunch a Cell where feasible.
+- IOMMU/DMA;
+- PCIe/NVMe;
+- interrupt remapping;
+- USB/xHCI;
+- firmware/chipset;
+- GPU;
 
-Pass condition:
-
-Nexus remains responsive and can diagnose the failed Cell.
-
-## Step J — hardware boundary
-
-Strong containment requires progressively moving hardware authority out of the Cell.
-
-Priorities:
-
-1. timer/event path;
-2. reference block service;
-3. PCI/MMIO mediation;
-4. AHCI/NVMe;
-5. USB;
-6. network;
-7. graphics/audio.
-
-HIDD is used as a compatibility seam, not blindly serialized as an IPC protocol.
-
-## Step K — DMA/IOMMU
-
-When a driver can perform bus-master DMA, CPU page tables alone are insufficient.
-
-For L4:
-
-- Nexus owns IOMMU configuration;
-- DMA access is derived from Nexus MemoryObjects;
-- drivers receive only device-specific DMA mappings;
-- revocation removes device access.
-
-Without usable IOMMU hardware, the reduced isolation level must be reported honestly.
-
-## Step L — SMP
-
-Only after single-vCPU Cell behaviour is stable:
-
-- create multiple Legacy vCPUs;
-- bind them to NexusThreads;
-- let the existing Exec SMP scheduler schedule legacy Tasks internally;
-- validate signalling, locks and task migration;
-- validate Nexus TLB shootdown for AddressSpaces active on multiple CPUs.
-
-Nexus must remain able to schedule unrelated protected threads regardless of Cell `Forbid()` state.
-
-## Initial code-location rule
-
-Do not create a second unrelated kernel tree simply because Nexus is conceptually a new kernel layer.
-
-Prefer:
-
-- extracting clean mechanisms from the current kernel/resource boundary;
-- isolating Nexus-specific code under clearly named files/directories;
-- leaving Exec-specific scheduling logic in the Legacy compatibility side;
-- avoiding invasive changes to `rom/exec` during substrate work.
-
-The first implementation should maximize the amount of upstream AROS code that remains mergeable.
-
-## Upstream-sync rule
-
-The fork must remain capable of ingesting upstream AROS changes.
-
-Therefore:
-
-- `master` tracks upstream only;
-- Nexus changes live on `nexus/main` and feature branches;
-- avoid formatting churn;
-- do not rename large existing trees without architectural need;
-- prefer adapters/extraction over wholesale rewrites;
-- record intentional architectural divergence in ADRs.
+stop the dependent roadmap chain and prepare a real-hardware validation package.
 
 ## Substrate MVP definition of done
 
-The Nexus substrate MVP is complete when:
+The first convergent Nexus substrate is proven when:
 
-- Nexus has an explicit x86-64 AddressSpace abstraction;
-- executable permission is hardware-enforced for protected mappings;
-- a second protected address space works;
-- a deliberate domain fault does not halt Nexus;
+- current AROS still boots normally;
+- AddressSpace ownership is explicit;
+- R/W/X protection is real;
+- a protected fault is contained;
+- a second AddressSpace works;
 - explicit shared MemoryObject mapping works;
-- protected IPC/capability validation works;
-- all results are reproducible under the reference QEMU configuration.
+- all results are reproducible under reference QEMU;
+- upstream remains integrable with narrow A-class diffs.
 
-## Legacy Cell MVP definition of done
+## Convergence MVP definition of done
 
-The first Legacy Cell MVP is complete when:
+The first architecture-level convergence proof is complete when:
 
-- ABI v1 Exec and DOS run inside a Cell;
-- Legacy privilege cannot become unrestricted Nexus privilege;
-- current Exec task scheduling remains internal to the Cell;
-- fatal CPU memory corruption cannot overwrite Nexus;
-- Cell failure does not halt Nexus;
-- Wanderer can be reached in a documented transitional configuration;
-- the milestone states its actual isolation level;
-- upstream integration remains manageable.
+- one protected AROS application coexists with normal ABI v1 software;
+- one interface has demonstrated generated direct/validated transport forms;
+- no duplicate Exec/runtime ecosystem is required;
+- m68k compatibility remains upstream-owned;
+- performance and compatibility results are documented.
