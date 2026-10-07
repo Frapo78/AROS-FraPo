@@ -1,5 +1,11 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: Read the issue submission rules first
-    url: https://github.com/aros-development-team/AROS/wiki
-    about: Please check the documentation before opening an issue.
+  - name: Nexus vision and architecture
+    url: https://github.com/Frapo78/AROS-FraPo/blob/nexus/main/docs/nexus/README.md
+    about: Read the project goals, architecture and current status before proposing a deep design change.
+  - name: Nexus community discussions
+    url: https://github.com/Frapo78/AROS-FraPo/discussions
+    about: Use Discussions for broad architectural ideas, questions and community conversation.
+  - name: Upstream AROS
+    url: https://github.com/aros-development-team/AROS
+    about: General AROS bugs or improvements not specific to Nexus may belong upstream.
