@@ -45,6 +45,14 @@ tmp="$(mktemp -d)"
 inside_work="$repo_root/.nexus-baseline-selftest-work"
 trap 'rm -rf "$tmp" "$inside_work"' EXIT
 
+# The upstream stage driver is a /bin/sh script and is not guaranteed to
+# carry the executable bit in every checkout. The wrapper must invoke it through
+# sh rather than execute it directly.
+grep -Fq 'sh "$stage_driver" toolchain' "$build" ||
+    fail "build wrapper does not invoke toolchain stage through sh"
+grep -Fq 'sh "$stage_driver" core' "$build" ||
+    fail "build wrapper does not invoke core stage through sh"
+
 # Build-wrapper guards that must fail before any expensive build begins.
 expect_fail "unsupported build target" \
     env NEXUS_TARGET=not-a-real-target "$build"
