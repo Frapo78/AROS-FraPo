@@ -100,6 +100,7 @@ host_cxx_version="$(first_version_line c++)"
 
 crosstools_tree="$(git -C "$repo_root" rev-parse HEAD:tools/crosstools)"
 collect_tree="$(git -C "$repo_root" rev-parse HEAD:tools/collect-aros)"
+stage_driver="$repo_root/scripts/azure/aros-stage.sh"
 stage_driver_blob="$(git -C "$repo_root" rev-parse HEAD:scripts/azure/aros-stage.sh)"
 configure_blob="$(git -C "$repo_root" rev-parse HEAD:configure)"
 
@@ -185,6 +186,8 @@ trap finish EXIT
     fi
     printf 'CROSSTOOLS_TREE=%s\n' "$crosstools_tree"
     printf 'COLLECT_AROS_TREE=%s\n' "$collect_tree"
+    printf 'STAGE_DRIVER=%s\n' "$stage_driver"
+    printf 'STAGE_DRIVER_INVOKER=sh\n'
     printf 'STAGE_DRIVER_BLOB=%s\n' "$stage_driver_blob"
     printf 'CONFIGURE_BLOB=%s\n' "$configure_blob"
     printf 'TOOLCHAIN_INPUT_KEY=%s\n' "$toolchain_input_key"
@@ -241,7 +244,7 @@ export BUILDTHREADS="$jobs"
 export CCACHE_DISABLE=1
 
 printf 'Building fresh AROS toolchain for baseline attempt %s...\n' "$attempt_id"
-"$repo_root/scripts/azure/aros-stage.sh" toolchain "${configure_args[@]}"
+sh "$stage_driver" toolchain "${configure_args[@]}"
 
 toolchain_cc="$toolchain_dir/bin/x86_64-aros-gcc"
 toolchain_ld="$toolchain_dir/bin/x86_64-aros-ld"
@@ -258,7 +261,7 @@ toolchain_ld="$toolchain_dir/bin/x86_64-aros-ld"
 } >> "$manifest"
 
 printf 'Building AROS core for %s (%s profile)...\n' "$target" "$profile"
-"$repo_root/scripts/azure/aros-stage.sh" core "${configure_args[@]}"
+sh "$stage_driver" core "${configure_args[@]}"
 
 printf 'Building boot ISO...\n'
 make -C "$build_dir" -j"$jobs" bootiso
