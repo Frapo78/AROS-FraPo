@@ -65,7 +65,7 @@ source "$resolver_source"
 toolchain_dir="$tmp/toolchain"
 mkdir -p "$toolchain_dir/bin"
 expect_fail "missing cross compiler" resolve_tool x86_64-aros-gcc
-printf '#!/bin/sh\\nexit 0\\n' > "$toolchain_dir/x86_64-aros-gcc"
+printf '#!/bin/sh\nexit 0\n' > "$toolchain_dir/x86_64-aros-gcc"
 chmod +x "$toolchain_dir/x86_64-aros-gcc"
 [ "$(resolve_tool x86_64-aros-gcc)" = "$toolchain_dir/x86_64-aros-gcc" ] ||
     fail "root-layout compiler was not resolved"
