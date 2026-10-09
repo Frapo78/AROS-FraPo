@@ -17,7 +17,7 @@ expect_fail()
     shift
 
     set +e
-    "$@" >/dev/null 2>&1
+    ("$@") >/dev/null 2>&1
     rc=$?
     set -e
 
