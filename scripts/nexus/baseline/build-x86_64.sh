@@ -246,8 +246,20 @@ export CCACHE_DISABLE=1
 printf 'Building fresh AROS toolchain for baseline attempt %s...\n' "$attempt_id"
 sh "$stage_driver" toolchain "${configure_args[@]}"
 
-toolchain_cc="$toolchain_dir/bin/x86_64-aros-gcc"
-toolchain_ld="$toolchain_dir/bin/x86_64-aros-ld"
+# Accept only known AROS crosstools layouts; fail closed on ambiguity.
+resolve_tool() {
+    local name="$1" candidate found=""
+    for candidate in "$toolchain_dir/$name" "$toolchain_dir/bin/$name"; do
+        if [ -x "$candidate" ]; then
+            [ -z "$found" ] || die "ambiguous toolchain executable: $name"
+            found="$candidate"
+        fi
+    done
+    [ -n "$found" ] || die "expected toolchain executable not found: $name"
+    printf '%s\n' "$found"
+}
+toolchain_cc="$(resolve_tool x86_64-aros-gcc)"
+toolchain_ld="$(resolve_tool x86_64-aros-ld)"
 [ -x "$toolchain_cc" ] || die "expected compiler not found: $toolchain_cc"
 [ -x "$toolchain_ld" ] || die "expected linker not found: $toolchain_ld"
 
