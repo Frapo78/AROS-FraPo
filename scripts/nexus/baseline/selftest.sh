@@ -78,6 +78,21 @@ chmod -x "$toolchain_dir/x86_64-aros-gcc"
 [ "$(resolve_tool x86_64-aros-gcc)" = "$toolchain_dir/bin/x86_64-aros-gcc" ] ||
     fail "non-executable duplicate should not shadow compiler"
 
+# The linker must obey the same strict path resolution rules as GCC.
+expect_fail "missing cross linker" resolve_tool x86_64-aros-ld
+printf '#!/bin/sh\nexit 0\n' > "$toolchain_dir/x86_64-aros-ld"
+chmod +x "$toolchain_dir/x86_64-aros-ld"
+[ "$(resolve_tool x86_64-aros-ld)" = "$toolchain_dir/x86_64-aros-ld" ] ||
+    fail "root-layout linker was not resolved"
+mv "$toolchain_dir/x86_64-aros-ld" "$toolchain_dir/bin/x86_64-aros-ld"
+[ "$(resolve_tool x86_64-aros-ld)" = "$toolchain_dir/bin/x86_64-aros-ld" ] ||
+    fail "bin-layout linker was not resolved"
+cp "$toolchain_dir/bin/x86_64-aros-ld" "$toolchain_dir/x86_64-aros-ld"
+expect_fail "ambiguous cross linker" resolve_tool x86_64-aros-ld
+chmod -x "$toolchain_dir/x86_64-aros-ld"
+[ "$(resolve_tool x86_64-aros-ld)" = "$toolchain_dir/bin/x86_64-aros-ld" ] ||
+    fail "non-executable duplicate should not shadow linker"
+
 # Build-wrapper guards that must fail before any expensive build begins.
 expect_fail "unsupported build target" \
     env NEXUS_TARGET=not-a-real-target "$build"
