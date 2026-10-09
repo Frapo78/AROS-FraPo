@@ -53,6 +53,31 @@ grep -Fq 'sh "$stage_driver" toolchain' "$build" ||
 grep -Fq 'sh "$stage_driver" core' "$build" ||
     fail "build wrapper does not invoke core stage through sh"
 
+# Exercise the actual resolver extracted from the build wrapper, not a copy.
+resolver_source="$tmp/resolve-tool.sh"
+sed -n '/^resolve_tool() {/,/^}/p' "$build" > "$resolver_source"
+grep -q '^resolve_tool() {' "$resolver_source" ||
+    fail "toolchain resolver is missing"
+# The build wrapper uses die() for rejected layouts.
+die() { fail "$*"; }
+# shellcheck disable=SC1090
+source "$resolver_source"
+toolchain_dir="$tmp/toolchain"
+mkdir -p "$toolchain_dir/bin"
+expect_fail "missing cross compiler" resolve_tool x86_64-aros-gcc
+printf '#!/bin/sh\\nexit 0\\n' > "$toolchain_dir/x86_64-aros-gcc"
+chmod +x "$toolchain_dir/x86_64-aros-gcc"
+[ "$(resolve_tool x86_64-aros-gcc)" = "$toolchain_dir/x86_64-aros-gcc" ] ||
+    fail "root-layout compiler was not resolved"
+mv "$toolchain_dir/x86_64-aros-gcc" "$toolchain_dir/bin/x86_64-aros-gcc"
+[ "$(resolve_tool x86_64-aros-gcc)" = "$toolchain_dir/bin/x86_64-aros-gcc" ] ||
+    fail "bin-layout compiler was not resolved"
+cp "$toolchain_dir/bin/x86_64-aros-gcc" "$toolchain_dir/x86_64-aros-gcc"
+expect_fail "ambiguous cross compiler" resolve_tool x86_64-aros-gcc
+chmod -x "$toolchain_dir/x86_64-aros-gcc"
+[ "$(resolve_tool x86_64-aros-gcc)" = "$toolchain_dir/bin/x86_64-aros-gcc" ] ||
+    fail "non-executable duplicate should not shadow compiler"
+
 # Build-wrapper guards that must fail before any expensive build begins.
 expect_fail "unsupported build target" \
     env NEXUS_TARGET=not-a-real-target "$build"
