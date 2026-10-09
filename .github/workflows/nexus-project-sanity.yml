@@ -13,6 +13,7 @@ on:
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/pull_request_template.md'
       - '.github/workflows/nexus-project-sanity.yml'
+      - '.github/workflows/nexus-qemu.yml'
   pull_request:
     branches:
       - nexus/main
@@ -25,6 +26,7 @@ on:
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/pull_request_template.md'
       - '.github/workflows/nexus-project-sanity.yml'
+      - '.github/workflows/nexus-qemu.yml'
 
 permissions:
   contents: read
@@ -66,6 +68,13 @@ jobs:
             .github/ISSUE_TEMPLATE/nexus_engineering_task.md
             .github/pull_request_template.md
             scripts/nexus/verify-agent-contract.sh
+            scripts/nexus/verify-qemu-policy.sh
+            scripts/nexus/baseline/README.md
+            scripts/nexus/baseline/build-x86_64.sh
+            scripts/nexus/baseline/run-qemu-x86_64.sh
+            scripts/nexus/baseline/record-wanderer-result.sh
+            scripts/nexus/baseline/selftest.sh
+            .github/workflows/nexus-qemu.yml
           )
           for file in "${required[@]}"; do
             test -f "$file" || {
@@ -118,12 +127,32 @@ jobs:
 
           print("Nexus local Markdown links are valid.")
 
+      - name: Check Nexus shell syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' script; do
+            echo "Checking $script"
+            bash -n "$script"
+          done < <(find scripts/nexus -type f -name '*.sh' -print0)
+
       - name: Run agent-contract adversarial self-test
         shell: bash
         run: |
           set -euo pipefail
-          bash -n scripts/nexus/verify-agent-contract.sh
           scripts/nexus/verify-agent-contract.sh --selftest
+
+      - name: Run baseline harness self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/nexus/baseline/selftest.sh
+
+      - name: Run parsimonious QEMU policy self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/nexus/verify-qemu-policy.sh --selftest
 
       - name: Check Nexus process references
         shell: bash
