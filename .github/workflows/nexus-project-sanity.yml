@@ -13,6 +13,7 @@ on:
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/pull_request_template.md'
       - '.github/workflows/nexus-project-sanity.yml'
+      - 'scripts/azure/**'
   pull_request:
     branches:
       - nexus/main
