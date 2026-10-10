@@ -105,7 +105,7 @@ struct NameserventNode {
   struct nameservent {
     struct in_addr ns_addr;	/* IPv4 server (nsn_Family == AF_INET) */
   } nsn_Ent;
-  APTR            nsn_Owner;	/* owning struct ifnet * for per-interface DNS, else NULL */
+  struct ifnet   *nsn_Owner;	/* owning interface for per-interface DNS, else NULL */
   UBYTE           nsn_Family;	/* AF_INET or AF_INET6 (0 == AF_INET for old creators) */
   struct in6_addr nsn_Addr6;	/* IPv6 server (nsn_Family == AF_INET6) */
 };
@@ -162,6 +162,8 @@ LONG do_netdb(struct CSource *cs, UBYTE **errstrp, struct CSource *res);
 LONG reset_netdb(struct CSource *cs, UBYTE **errstrp, struct CSource *res);
 LONG init_netdb(void);
 void netdb_deinit(void);
+LONG netdb_reload(void);        /* re-read config in place (reload): swap NDB, re-apply interfaces */
+void dyndb_flush(void);         /* drop all dynamic nameservers/domains (reload) */
 #define NETDB_DEFER_SECS 5      /* how often a DEFER interface is tried again */
 void netdb_defer_timer(void);   /* periodic retry of DEFER interfaces */
      
