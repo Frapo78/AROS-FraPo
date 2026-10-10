@@ -1,0 +1,27 @@
+name: Nexus mapping contract host test
+
+on:
+  pull_request:
+    branches:
+      - nexus/main
+    paths:
+      - 'nexus/experimental/**'
+      - '.github/workflows/nexus-mapping-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mapping-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Compile and test Nexus mapping policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -Wall -Wextra -Werror -pedantic -fsanitize=undefined \\
+            -o /tmp/nexus-mapping-contract nexus/experimental/tests/mapping_rights_test.c
+          /tmp/nexus-mapping-contract
