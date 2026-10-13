@@ -269,6 +269,77 @@ grep -q '^FINAL_STATUS=marker-timeout$' "$marker_timeout/run-manifest.txt" ||
 grep -q '^MARKER_REACHED_FINAL=no$' "$marker_timeout/run-manifest.txt" ||
     fail "marker timeout incorrectly recorded marker success"
 
+# Optional screenshot capture must not promote timeout to a successful G2a result.
+# This fake QEMU does not expose an HMP socket, so capture must fail closed.
+marker_timeout_screen="$tmp/run-marker-timeout-screen"
+set +e
+FAKE_QEMU_SLEEP_SECONDS=10 \
+NEXUS_QEMU_BINARY="$fake_qemu" \
+NEXUS_QEMU_MODE=headless \
+NEXUS_QEMU_EXPECT_MARKER="$marker" \
+NEXUS_QEMU_TIMEOUT_SECONDS=1 \
+NEXUS_QEMU_CAPTURE_SCREEN_ON_TIMEOUT=yes \
+    "$runner" "$iso" "$marker_timeout_screen" >/dev/null 2>&1
+marker_timeout_screen_rc=$?
+set -e
+
+[ "$marker_timeout_screen_rc" -eq 124 ] ||
+    fail "missing screenshot incorrectly changed marker timeout exit"
+grep -q '^FINAL_STATUS=marker-timeout
+marker_early_exit="$tmp/run-marker-early-exit"
+set +e
+NEXUS_QEMU_BINARY="$fake_qemu" \
+NEXUS_QEMU_MODE=headless \
+NEXUS_QEMU_EXPECT_MARKER="$marker" \
+NEXUS_QEMU_TIMEOUT_SECONDS=4 \
+    "$runner" "$iso" "$marker_early_exit" >/dev/null 2>&1
+marker_early_rc=$?
+set -e
+
+[ "$marker_early_rc" -ne 0 ] ||
+    fail "QEMU early exit without marker was accepted"
+grep -q '^FINAL_STATUS=qemu-exited-before-marker$' "$marker_early_exit/run-manifest.txt" ||
+    fail "early exit did not record qemu-exited-before-marker"
+
+# The ISO must remain byte-identical to the artifact bound by G1 evidence.
+printf 'tampered\n' >> "$iso"
+
+expect_fail "tampered ISO provenance" \
+    env NEXUS_QEMU_BINARY="$fake_qemu" \
+    "$runner" "$iso" "$tmp/run-tampered"
+
+printf 'nexus-baseline-selftest: PASS\n'
+ "$marker_timeout_screen/run-manifest.txt" ||
+    fail "missing screenshot incorrectly changed marker timeout status"
+grep -q '^SCREEN_CAPTURE_STATUS=failed
+marker_early_exit="$tmp/run-marker-early-exit"
+set +e
+NEXUS_QEMU_BINARY="$fake_qemu" \
+NEXUS_QEMU_MODE=headless \
+NEXUS_QEMU_EXPECT_MARKER="$marker" \
+NEXUS_QEMU_TIMEOUT_SECONDS=4 \
+    "$runner" "$iso" "$marker_early_exit" >/dev/null 2>&1
+marker_early_rc=$?
+set -e
+
+[ "$marker_early_rc" -ne 0 ] ||
+    fail "QEMU early exit without marker was accepted"
+grep -q '^FINAL_STATUS=qemu-exited-before-marker$' "$marker_early_exit/run-manifest.txt" ||
+    fail "early exit did not record qemu-exited-before-marker"
+
+# The ISO must remain byte-identical to the artifact bound by G1 evidence.
+printf 'tampered\n' >> "$iso"
+
+expect_fail "tampered ISO provenance" \
+    env NEXUS_QEMU_BINARY="$fake_qemu" \
+    "$runner" "$iso" "$tmp/run-tampered"
+
+printf 'nexus-baseline-selftest: PASS\n'
+ "$marker_timeout_screen/run-manifest.txt" ||
+    fail "missing HMP monitor did not record screenshot capture failure"
+[ ! -e "$marker_timeout_screen/screen-at-marker-timeout.ppm" ] ||
+    fail "invalid diagnostic screenshot was retained"
+
 # QEMU exiting before the marker must fail even if QEMU itself exits zero.
 marker_early_exit="$tmp/run-marker-early-exit"
 set +e
