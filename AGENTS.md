@@ -128,6 +128,23 @@ AI agreement alone is not evidence.
 
 More agents do not automatically raise evidence level.
 
+## QEMU budget
+
+QEMU is evidence, not a default background expense.
+
+Rules:
+- no automatic QEMU on every push;
+- no scheduled/nightly matrix by default;
+- normal PR QEMU runs only at selected lifecycle points for relevant x86-64/kernel/build paths;
+- rerun after later commits only when required, using explicit manual dispatch;
+- one vCPU/reference configuration before any matrix;
+- cancel obsolete runs for the same PR/ref;
+- use hard workflow and guest-marker timeouts;
+- upload short-lived logs/manifests, not the ISO by default;
+- expand the QEMU matrix only when a specific falsifiable claim requires it.
+
+A QEMU marker proves only that named checkpoint. It does not imply Wanderer, SMP, isolation, DMA or real-hardware correctness.
+
 ## Human/hardware gates
 
 ### H0 — machine-verifiable
