@@ -387,3 +387,41 @@ A script committed to Git is not proof that AROS boots.
 - **Review 3:** simulate a fake HMP endpoint plus absent/malformed/stale output.
   **NO TEST, EXPLAIN WHY:** synthetic tests cannot prove a BIOS/GRUB framebuffer
   is legible in a real VM; only a fresh controlled QEMU run can demonstrate that.
+
+### Evidence and reviews for the timeout-screen diagnostic
+
+- Verified implementation head before review note:
+  `9fa1543f64dab6a55ee48902f2edc47d3ca705df`.
+- GitHub-hosted `Nexus project sanity` run
+  [38387664077](https://github.com/Frapo78/AROS-FraPo/actions/runs/38387664077)
+  passed. Its baseline-harness negative test, new Python fake-HMP tests,
+  shell syntax, and QEMU policy self-test all passed. Repository filename
+  and line-ending jobs also passed on this SHA.
+- **Review 1 / Construction (focused change):** optional, bounded HMP
+  diagnostics only; rejects unsafe/pre-existing paths, bogus/truncated
+  PPM evidence, and missing UNIX monitor sockets. No AROS source changes.
+  A real display capture is deliberately not a boot pass.
+- **Review 2 / Integration (focused change):** original serial marker,
+  one vCPU, guest marker deadline, workflow trigger policy and artifact
+  retention are preserved. HMP is enabled only by explicit option;
+  the CI workflow opts in for its next bounded run. Upstream master is
+  `084dfe66344b67591d34b7adb318d0fc203ddce7`; tested baseline
+  remains `2edd46536d08e3b54ecd1315f337a9b7de896f3a`.
+  No A-class seam, bridge, ABI or machine-authority change.
+- **Review 3 / Evidence Red Team:** focused Python tests simulate a working
+  HMP monitor, missing socket, untrusted path, pre-existing screenshot,
+  truncated PPM and fake bytes. Baseline harness simulates an unreachable
+  HMP monitor and confirms the original marker-timeout exit 124 and
+  `FINAL_STATUS=marker-timeout` remain unchanged.
+- **Evidence boundary:** E2 for synthetic tests on GitHub-hosted CI.
+  **NO TEST, EXPLAIN WHY:** real framebuffer capture in QEMU was not run
+  on this source SHA. Strongest remaining failure: BIOS/GRUB displays an
+  error but the screenshot is blank, unsupported or absent. Required next
+  step: one deliberately dispatched, resource-bounded QEMU run, retaining
+  image/log/manifest for analysis. G2a requires its serial marker;
+  screenshot presence cannot satisfy it.
+- **Gate/claims:** H0 for this tooling addition, no H1/H2/H3 fulfillment
+  implied, and no new L0–L5 runtime security claim.
+- **Merge stop:** this focused change has G0 evidence, but the broader
+  QEMU PR #24 is still blocked on G2a/E4. No automatic ISO upload and no
+  baseline promotion are authorized.
