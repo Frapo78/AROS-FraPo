@@ -30,7 +30,7 @@ class CaptureTests(unittest.TestCase):
             self.assertFalse(module.capture(temp + "/missing.sock", str(screenshot)))
 
     def test_synthetic_ppm_and_spoofed_payload(self):
-        for payload, expected in ((b"P6\\n1 1\\n255\\n\\x00\\x00\\x00", True), (b"FAKE", False)):
+        for payload, expected in ((b"P6\n1 1\n255\n\x00\x00\x00", True), (b"FAKE", False)):
             with self.subTest(payload=payload), tempfile.TemporaryDirectory() as temp:
                 path = Path(temp)
                 endpoint = str(path / "monitor.sock")
@@ -44,7 +44,7 @@ class CaptureTests(unittest.TestCase):
                         peer, _ = sock.accept()
                         with peer:
                             command = peer.recv(4096)
-                            if command == f"screendump {output}\\n".encode("ascii"):
+                            if command == f"screendump {output}\n".encode("ascii"):
                                 Path(output).write_bytes(payload)
                 t = threading.Thread(target=server, daemon=True)
                 t.start()
