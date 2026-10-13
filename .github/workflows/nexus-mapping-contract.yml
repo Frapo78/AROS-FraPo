@@ -22,6 +22,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cc -std=c11 -Wall -Wextra -Werror -pedantic -fsanitize=undefined \\
+          cc -std=c11 -Wall -Wextra -Werror -pedantic -fsanitize=undefined \
             -o /tmp/nexus-mapping-contract nexus/experimental/tests/mapping_rights_test.c
           /tmp/nexus-mapping-contract
