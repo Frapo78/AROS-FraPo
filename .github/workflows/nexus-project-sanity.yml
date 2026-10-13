@@ -148,6 +148,12 @@ jobs:
           set -euo pipefail
           scripts/nexus/baseline/selftest.sh
 
+      - name: Test synthetic QEMU screen capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/nexus/baseline -p 'test_capture_qemu_screen.py' -v
+
       - name: Run parsimonious QEMU policy self-test
         shell: bash
         run: |
