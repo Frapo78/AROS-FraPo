@@ -170,6 +170,18 @@ if [ -n "$timeout_seconds" ]; then
         die "NEXUS_QEMU_TIMEOUT_SECONDS must be greater than zero"
 fi
 
+capture_on_timeout="${NEXUS_QEMU_CAPTURE_SCREEN_ON_TIMEOUT:-no}"
+case "$capture_on_timeout" in
+    yes|no) ;;
+    *) die "NEXUS_QEMU_CAPTURE_SCREEN_ON_TIMEOUT must be yes or no" ;;
+esac
+if [ "$capture_on_timeout" = yes ]; then
+    [ "$mode" = headless ] && [ -n "$expected_marker" ] ||
+        die "timeout screen capture requires headless marker mode"
+    command -v python3 >/dev/null 2>&1 ||
+        die "python3 is required for optional screen capture"
+fi
+
 if [ -z "$expected_marker" ] && [ -n "$timeout_seconds" ]; then
     command -v timeout >/dev/null 2>&1 ||
         die "timeout command is required when NEXUS_QEMU_TIMEOUT_SECONDS is set"
@@ -188,6 +200,10 @@ result_dir="$(cd -- "$result_dir" && pwd -P)"
 
 serial_log="$result_dir/serial.log"
 manifest="$result_dir/run-manifest.txt"
+screen_file="$result_dir/screen-at-marker-timeout.ppm"
+monitor_socket="$result_dir/qemu-hmp.sock"
+capture_status=not-attempted
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 qemu_args=(
     -machine pc
@@ -199,13 +215,17 @@ qemu_args=(
     -cdrom "$iso"
     -nic none
     -serial "file:$serial_log"
-    -monitor none
     -rtc base=utc
     -no-reboot
 )
 
 if [ "$mode" = headless ]; then
     qemu_args+=(-display none)
+fi
+if [ "$capture_on_timeout" = yes ]; then
+    qemu_args+=(-monitor "unix:$monitor_socket,server=on,wait=off")
+else
+    qemu_args+=(-monitor none)
 fi
 
 {
@@ -231,6 +251,7 @@ fi
     printf 'MEMORY_MIB=%s\n' "$memory_mib"
     printf 'NETWORK=none\n'
     printf 'SERIAL_LOG=%s\n' "$serial_log"
+    printf 'SCREEN_CAPTURE_ON_TIMEOUT=%s\n' "$capture_on_timeout"
     printf 'WANDERER_VERIFICATION=unverified\n'
     if [ -n "$expected_marker" ]; then
         printf 'EXPECTED_MARKER=%s\n' "$expected_marker"
@@ -267,6 +288,15 @@ if [ -n "$expected_marker" ]; then
         fi
 
         if [ "$SECONDS" -ge "$deadline" ]; then
+            if [ "$capture_on_timeout" = yes ]; then
+                if python3 "$script_dir/capture-qemu-screen.py" "$monitor_socket" "$screen_file" \
+                    > "$result_dir/screen-capture.log" 2>&1; then
+                    capture_status=captured
+                else
+                    capture_status=failed
+                    rm -f -- "$screen_file"
+                fi
+            fi
             final_status=marker-timeout
             rc=124
             break
@@ -318,6 +348,10 @@ else
     fi
 fi
 
+if [ "$capture_on_timeout" = yes ]; then
+    rm -f -- "$monitor_socket"
+fi
+
 {
     printf 'QEMU_EXIT_CODE=%s\n' "$rc"
     printf 'FINISHED_UTC=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
@@ -325,6 +359,12 @@ fi
         printf 'MARKER_REACHED_FINAL=%s\n' "$marker_reached"
     fi
     printf 'FINAL_STATUS=%s\n' "$final_status"
+    if [ "$capture_on_timeout" = yes ]; then
+        printf 'SCREEN_CAPTURE_STATUS=%s\n' "$capture_status"
+        if [ "$capture_status" = captured ]; then
+            printf 'SCREEN_CAPTURE_SHA256=%s\n' "$(sha256_file "$screen_file")"
+        fi
+    fi
 } >> "$manifest"
 
 if [ "$final_status" = marker-reached ]; then
