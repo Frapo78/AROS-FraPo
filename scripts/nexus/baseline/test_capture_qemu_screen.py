@@ -30,7 +30,7 @@ class CaptureTests(unittest.TestCase):
             self.assertFalse(module.capture(temp + "/missing.sock", str(screenshot)))
 
     def test_synthetic_ppm_and_spoofed_payload(self):
-        for payload, expected in ((b"P6\n1 1\n255\n\x00\x00\x00", True), (b"FAKE", False)):
+        for payload, expected in ((b"P6\n1 1\n255\n\x00\x00\x00", True), (b"P6\n1 1\n255\n", False), (b"FAKE", False)):
             with self.subTest(payload=payload), tempfile.TemporaryDirectory() as temp:
                 path = Path(temp)
                 endpoint = str(path / "monitor.sock")
