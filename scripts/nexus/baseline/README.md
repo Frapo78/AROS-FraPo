@@ -350,3 +350,40 @@ Additional residual limitations include:
 - Wanderer success is still a manual observation.
 
 A script committed to Git is not proof that AROS boots.
+
+
+## 2026-10-13 task contract: opt-in timeout framebuffer diagnostics
+
+- **Goal:** when an existing bounded G2a marker test times out, optionally request one
+  QEMU monitor framebuffer snapshot to distinguish a blank VM from a visible
+  firmware/GRUB/kernel error. The screenshot is diagnostic, never boot evidence.
+- **Non-goals:** change AROS or the kernel, alter the existing ISO, change G2a's
+  marker/exit-code criteria, extend CI runtime, enable extra CPUs or devices,
+  introduce an automatic scheduled QEMU run, or claim Wanderer.
+- **Preconditions:** the normal G1-bound ISO and QEMU runner; Python 3 for the
+  optional HMP helper; an isolated UNIX monitor socket within the result dir.
+- **Ownership:** U = upstream OS and ISO build (untouched); N = diagnostic
+  harness/helper/tests/workflow; A = none. B0–B3 are not applicable.
+  All CR3/IRQ/memory/device/DMA authority remains legacy-owned.
+- **Integrator:** Frapo78, on the existing focused `nexus/qemu-ci` branch.
+- **Acceptance:** opt-in only; one HMP screendump near marker timeout; retain a
+  non-empty PPM evidence file if generated; preserve `marker-timeout`, exit 124,
+  one vCPU, 60-second guest deadline and the 3-day artifact policy. Diagnostic
+  failure must not turn a failed G2a into a success.
+- **Negative / red-team criteria:** reject missing monitor socket, malformed or
+  pre-existing screenshot, unsafe output pathname, and bogus screenshot bytes.
+  A PPM screenshot cannot be promoted to G2a or Wanderer success.
+- **Evidence:** E1 static shell/CI-policy review; E2 synthetic socket-based
+  tests; E4 only if a real bounded QEMU run provides fresh screen + marker data.
+- **Human/hardware:** H0 for diagnostics only. H1 before future protected
+  kernel/ABI changes; H2 when material hardware properties require it; H3 for
+  strong release claims. No L1–L5 claim.
+- **Stop:** reject if provenance checks are weakened, resource caps are raised,
+  CI fails or the screenshot is wrongly treated as proof. Keep G2a blocked until
+  a real marker reaches the serial capture.
+- **Review 1:** examine output-file safety and fail-closed command parsing.
+- **Review 2:** ensure optional mode leaves normal QEMU args, guest deadline and
+  upstream OS unchanged; rerun CI sanity after changes.
+- **Review 3:** simulate a fake HMP endpoint plus absent/malformed/stale output.
+  **NO TEST, EXPLAIN WHY:** synthetic tests cannot prove a BIOS/GRUB framebuffer
+  is legible in a real VM; only a fresh controlled QEMU run can demonstrate that.
