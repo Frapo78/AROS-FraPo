@@ -8,6 +8,21 @@ import sys
 import time
 
 
+def complete_ppm(path: str) -> bool:
+    """Check a bounded uncompressed P6 screenshot, not merely its magic bytes."""
+    try:
+        with open(path, "rb") as stream:
+            header = stream.read(128)
+        match = re.match(rb"P6\s+([1-9][0-9]*)\s+([1-9][0-9]*)\s+255\s", header)
+        if not match:
+            return False
+        width, height = int(match.group(1)), int(match.group(2))
+        size = match.end() + width * height * 3
+        return 0 < size <= 16 * 1024 * 1024 and os.stat(path).st_size >= size
+    except OSError:
+        return False
+
+
 def capture(monitor_path: str, screenshot_path: str) -> bool:
     # HMP uses an unstructured command line: reject shell/control characters.
     if not re.fullmatch(r"[/A-Za-z0-9_.-]+", screenshot_path):
@@ -23,11 +38,8 @@ def capture(monitor_path: str, screenshot_path: str) -> bool:
             connection.sendall(f"screendump {screenshot_path}\n".encode("ascii"))
             deadline = time.monotonic() + 3.0
             while time.monotonic() < deadline:
-                if os.path.isfile(screenshot_path):
-                    with open(screenshot_path, "rb") as screenshot:
-                        if screenshot.read(2) in (b"P6", b"P3"):
-                            return True
-                    return False
+                if os.path.isfile(screenshot_path) and complete_ppm(screenshot_path):
+                    return True
                 time.sleep(0.1)
     except (OSError, UnicodeEncodeError):
         return False
