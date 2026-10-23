@@ -425,3 +425,42 @@ A script committed to Git is not proof that AROS boots.
 - **Merge stop:** this focused change has G0 evidence, but the broader
   QEMU PR #24 is still blocked on G2a/E4. No automatic ISO upload and no
   baseline promotion are authorized.
+
+## 2026-10-23 task contract: capture the BIOS GRUB configuration from the G1 ISO
+
+- **Goal:** retain the actual `/boot/grub/grub.cfg` extracted from the exact
+  G1 ISO, plus ISO/config SHA-256 and xorriso output, before attempting G2a.
+- **Non-goals:** rewrite GRUB, parse GRUB execution semantics, modify AROS,
+  infer the selected menu entry, promote a serial or security claim, or run
+  additional QEMU instances.
+- **Preconditions:** G1 creates a nonempty ISO; xorriso is already installed
+  in the bounded QEMU workflow; evidence output directory is new.
+- **Ownership:** U = upstream GRUB/ISO/kernel; N = capture helper, host
+  self-test, workflow wiring; A = none. No B0-B3 bridge is introduced.
+  Machine authority remains legacy-owned; no trust-ratchet transition.
+- **Integrator:** Frapo78; feature branch `nexus/qemu-ci`; issue #15.
+- **Acceptance:** extract nonempty BIOS GRUB config; retain xorriso log;
+  record exact ISO and extracted-file hashes; fail on extraction failure;
+  include evidence in the existing short-lived artifact; keep the existing
+  QEMU CPU/time/network/resource caps and marker criteria unchanged.
+- **Negative criteria:** missing/empty ISO, existing/symlink evidence
+  directory, extraction error, empty extracted config, and repeat invocation
+  must not report success. A synthetic xorriso test must not count as E4.
+- **Required evidence:** E1 shell/workflow checks; E2 positive and negative
+  fake-xorriso tests; E3 actual workflow integration; E4 only from a later
+  deterministic QEMU run with the real G1-bound ISO.
+- **Human/hardware:** H0 for this host diagnostic. No H1/H2/H3 requirement
+  is satisfied or implied; no real-hardware gate applies to this diagnostic.
+- **Security level:** no new L0-L5 property demonstrated.
+- **Stop:** reject if capture alters the ISO, weakens provenance, creates
+  an unbounded QEMU run, overwrites evidence, or promotes extracted text
+  into proof of GRUB execution or kernel entry.
+- **Review 1 (Construction):** inspect input validation, evidence overwrite,
+  shell error paths, scope and artifact lifetime.
+- **Review 2 (Integration):** inspect current upstream generator and ISO
+  layout, G1/G2 provenance, workflow resource policy and CI results.
+- **Review 3 (Evidence Red Team):** run missing/empty ISO, stale/symlink
+  destination, xorriso failure, empty extraction and duplicate-invocation
+  tests. **NO TEST, EXPLAIN WHY:** a fake xorriso cannot prove the real ISO
+  contains the path or that GRUB selects it; a G1 build with captured ISO
+  and a bounded real QEMU run are prerequisites for E3/E4.
