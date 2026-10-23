@@ -119,6 +119,15 @@ jobs:
             echo "- Build manifest: retained as short-lived evidence"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Capture G1 BIOS GRUB configuration (diagnostic only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/nexus/baseline/capture-iso-grub.sh \
+            "${{ steps.build.outputs.iso }}" \
+            "$RUNNER_TEMP/nexus-grub"
+          echo 'Captured BIOS GRUB configuration from G1 ISO (diagnostic, not boot proof).' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run bounded QEMU early-kernel marker smoke
         shell: bash
         run: |
@@ -153,3 +162,4 @@ jobs:
             ${{ runner.temp }}/nexus-qemu-result/**
             ${{ runner.temp }}/nexus-qemu/runs/**/artifacts/build-manifest.txt
             ${{ runner.temp }}/nexus-qemu/runs/**/artifacts/submodules.txt
+            ${{ runner.temp }}/nexus-grub/**
