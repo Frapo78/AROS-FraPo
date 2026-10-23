@@ -16,6 +16,7 @@ case "${FAKE_XORRISO_MODE:-valid}" in
     valid) printf 'menuentry "AROS" {\n multiboot2 /boot/pc/bootstrap debug\n}\n' > "$7" ;;
     empty) : > "$7" ;;
     fail) exit 7 ;;
+    tamper) printf 'tampered during extraction\n' >> "$4"; printf 'menuentry "AROS" {\n multiboot2 /boot/pc/bootstrap debug\n}\n' > "$7" ;;
     *) exit 8 ;;
 esac
 FAKE
@@ -33,10 +34,12 @@ expect_fail "$helper" "$tmp/reference.iso" "$tmp/symlink"
 expect_fail env FAKE_XORRISO_MODE=fail "$helper" "$tmp/reference.iso" "$tmp/failure"
 [ -f "$tmp/failure/xorriso.log" ] || { echo 'FAIL: missing extraction log' >&2; exit 1; }
 expect_fail env FAKE_XORRISO_MODE=empty "$helper" "$tmp/reference.iso" "$tmp/empty-grub"
+cp "$tmp/reference.iso" "$tmp/mutable.iso"
+expect_fail env FAKE_XORRISO_MODE=tamper "$helper" "$tmp/mutable.iso" "$tmp/tamper"
 "$helper" "$tmp/reference.iso" "$tmp/good" >/dev/null
 [ -s "$tmp/good/grub.cfg" ] || exit 1
 [ "$(sed -n 's/^ISO_SHA256=//p' "$tmp/good/provenance.txt")" = "$(sha256sum "$tmp/reference.iso" | awk '{print $1}')" ] || exit 1
 [ "$(sed -n 's/^GRUB_SHA256=//p' "$tmp/good/provenance.txt")" = "$(sha256sum "$tmp/good/grub.cfg" | awk '{print $1}')" ] || exit 1
 grep -qx 'CLAIM=diagnostic-only-not-boot-proof' "$tmp/good/provenance.txt"
 expect_fail "$helper" "$tmp/reference.iso" "$tmp/good"
-printf 'nexus-grub-selftest: PASS (7 negative cases and provenance checks)\n'
+printf 'nexus-grub-selftest: PASS (8 negative cases and provenance checks)\n'
