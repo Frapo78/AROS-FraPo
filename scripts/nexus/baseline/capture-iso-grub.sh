@@ -13,6 +13,8 @@ evidence_dir="$2"
 command -v xorriso >/dev/null 2>&1 || die 'xorriso unavailable'
 command -v sha256sum >/dev/null 2>&1 || die 'sha256sum unavailable'
 mkdir -- "$evidence_dir" || die 'cannot create evidence directory'
+iso_hash_before="$(sha256sum -- "$iso" | awk '{print $1}')"
+[ -n "$iso_hash_before" ] || die 'cannot hash input ISO'
 
 if ! xorriso -osirrox on -indev "$iso" \
     -extract /boot/grub/grub.cfg "$evidence_dir/grub.cfg" \
@@ -20,12 +22,16 @@ if ! xorriso -osirrox on -indev "$iso" \
     die 'BIOS GRUB extraction failed (see xorriso.log)'
 fi
 [ -s "$evidence_dir/grub.cfg" ] || die 'extracted BIOS GRUB configuration is empty'
+iso_hash_after="$(sha256sum -- "$iso" | awk '{print $1}')"
+[ "$iso_hash_before" = "$iso_hash_after" ] || die 'ISO changed during GRUB extraction'
+grub_hash="$(sha256sum -- "$evidence_dir/grub.cfg" | awk '{print $1}')"
+[ -n "$grub_hash" ] || die 'cannot hash extracted GRUB configuration'
 
 {
     printf 'FORMAT=nexus-grub-diagnostic-v1\n'
-    printf 'ISO_SHA256=%s\n' "$(sha256sum "$iso" | awk '{print $1}')"
+    printf 'ISO_SHA256=%s\n' "$iso_hash_after"
     printf 'GRUB_PATH=/boot/grub/grub.cfg\n'
-    printf 'GRUB_SHA256=%s\n' "$(sha256sum "$evidence_dir/grub.cfg" | awk '{print $1}')"
+    printf 'GRUB_SHA256=%s\n' "$grub_hash"
     printf 'CLAIM=diagnostic-only-not-boot-proof\n'
 } > "$evidence_dir/provenance.txt"
 printf 'nexus-grub: captured BIOS GRUB diagnostic evidence\n'
