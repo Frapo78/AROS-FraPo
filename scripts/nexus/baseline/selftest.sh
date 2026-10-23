@@ -315,4 +315,5 @@ expect_fail "tampered ISO provenance" \
     env NEXUS_QEMU_BINARY="$fake_qemu" \
     "$runner" "$iso" "$tmp/run-tampered"
 
+bash "$script_dir/test-capture-iso-grub.sh"
 printf 'nexus-baseline-selftest: PASS\n'
