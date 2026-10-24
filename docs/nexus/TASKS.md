@@ -27,7 +27,7 @@ Issue: #2
 Deliverable: `docs/nexus/X86_64_BOOT_MAP.md`
 
 ### P0.2 — Reproducible QEMU baseline
-Status: **todo**
+Status: **baseline harness integrated into QEMU CI branch; real G1/G2a run pending**
 Issue: #3
 
 ### P0.3 — Privileged-operation inventory
@@ -65,8 +65,15 @@ Document:
 - `ADDRESS_SPACE_MODEL.md`
 
 ### P0.9 — Nexus CI and QEMU implementation gate
-Status: **G0 repository sanity active; G1/G2 build and QEMU gates pending**
+Status: **resource-aware G2a implementation in progress; real GitHub-hosted QEMU run pending**
 Issue: #15
+
+Current QEMU policy:
+- no automatic push/schedule;
+- no PR synchronize trigger;
+- one single-vCPU G2a marker run;
+- manual dispatch for explicit reruns;
+- short logs/manifests only; no ISO upload by default.
 
 ### P0.10 — Evidence-driven agent engineering
 Status: **controls defined; three-pass review complete; integration tracked by #22 / PR #23**
