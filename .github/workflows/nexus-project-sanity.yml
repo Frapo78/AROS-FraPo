@@ -154,6 +154,12 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s scripts/nexus/baseline -p 'test_capture_qemu_screen.py' -v
 
+      - name: Test generated BIOS serial GRUB diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/nexus/baseline/test-prepare-serial-grub.py -v
+
       - name: Run parsimonious QEMU policy self-test
         shell: bash
         run: |
