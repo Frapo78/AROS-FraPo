@@ -275,6 +275,14 @@ toolchain_ld="$(resolve_tool x86_64-aros-ld)"
 printf 'Building AROS core for %s (%s profile)...\n' "$target" "$profile"
 sh "$stage_driver" core "${configure_args[@]}"
 
+# The upstream GRUB generator does not turn --with-serial-debug=yes into
+# debug=serial. For diagnostic BIOS boot only, edit the generated GRUB file
+# (never upstream source), then verify the final ISO in the QEMU workflow.
+if [ "$profile" = diagnostic ]; then
+    generated_grub="$build_dir/bin/pc-x86_64/AROS/boot/grub/grub.cfg"
+    python3 "$script_dir/prepare-serial-grub.py" --apply "$generated_grub" >> "$manifest"
+fi
+
 printf 'Building boot ISO...\n'
 make -C "$build_dir" -j"$jobs" bootiso
 
