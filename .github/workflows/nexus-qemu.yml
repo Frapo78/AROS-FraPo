@@ -126,7 +126,25 @@ jobs:
           bash scripts/nexus/baseline/capture-iso-grub.sh \
             "${{ steps.build.outputs.iso }}" \
             "$RUNNER_TEMP/nexus-grub"
-          echo 'Captured BIOS GRUB configuration from G1 ISO (diagnostic, not boot proof).' >> "$GITHUB_STEP_SUMMARY"
+
+          # The ISO, not the build-tree GRUB file, is the final authority.
+          grub="$RUNNER_TEMP/nexus-grub/grub.cfg"
+          build_manifest="${{ steps.build.outputs.artifact_dir }}/build-manifest.txt"
+          grub_provenance="$RUNNER_TEMP/nexus-grub/provenance.txt"
+          python3 scripts/nexus/baseline/prepare-serial-grub.py --check "$grub"
+
+          field() { awk -F= -v key="$1" '$1 == key {print $2}' "$2"; }
+          build_iso_hash="$(field ARTIFACT_SHA256 "$build_manifest")"
+          extracted_iso_hash="$(field ISO_SHA256 "$grub_provenance")"
+          prepared_grub_hash="$(field GRUB_AFTER_SHA256 "$build_manifest")"
+          extracted_grub_hash="$(field GRUB_SHA256 "$grub_provenance")"
+          [ -n "$build_iso_hash" ] && [ "$build_iso_hash" = "$extracted_iso_hash" ] || {
+            echo "::error::G1/GRUB ISO hash mismatch"; exit 1;
+          }
+          [ -n "$prepared_grub_hash" ] && [ "$prepared_grub_hash" = "$extracted_grub_hash" ] || {
+            echo "::error::Generated/ISO GRUB hash mismatch"; exit 1;
+          }
+          echo 'Verified debug=serial in actual G1 ISO BIOS default entry with matching provenance.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run bounded QEMU early-kernel marker smoke
         shell: bash
