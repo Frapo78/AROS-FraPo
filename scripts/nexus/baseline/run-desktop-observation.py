@@ -62,7 +62,9 @@ def run(iso, out, seconds=120):
     proc = None
     try:
         proc = subprocess.Popen(args, stdin=subprocess.DEVNULL)
-        time.sleep(seconds)
+        deadline = time.monotonic() + seconds
+        while proc.poll() is None and time.monotonic() < deadline:
+            time.sleep(min(1, max(0, deadline - time.monotonic())))
         if proc.poll() is not None:
             status = "qemu-exited-unverified"
         else:
