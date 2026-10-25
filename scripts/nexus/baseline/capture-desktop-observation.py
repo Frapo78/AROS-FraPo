@@ -30,18 +30,7 @@ def run(args):
     if not monitor.is_socket():
         raise ValueError("QEMU HMP monitor socket unavailable")
     script = Path(__file__).with_name("capture-qemu-screen.py")
-    if script.is_file():
-        subprocess.run([sys.executable, str(script), str(monitor), str(screenshot)], check=True, timeout=20)
-    else:
-        import socket
-        import time
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conn:
-            conn.settimeout(3)
-            conn.connect(str(monitor))
-            conn.sendall(("screendump " + str(screenshot) + "\\n").encode("ascii"))
-        deadline = time.monotonic() + 5
-        while time.monotonic() < deadline and not screenshot.is_file():
-            time.sleep(0.1)
+    subprocess.run([sys.executable, str(script), str(monitor), str(screenshot)], check=True, timeout=20)
     if not screenshot.is_file() or screenshot.stat().st_size < 16:
         raise ValueError("screenshot missing or empty")
     data = screenshot.read_bytes()
