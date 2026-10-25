@@ -59,9 +59,11 @@ class CaptureTests(unittest.TestCase):
                 m.run(self.args)
 
     def test_malformed_screenshot_is_failure(self):
-        (self.root / "desktop-observation.ppm").write_bytes(b"bad")
-        with self.assertRaisesRegex(ValueError, "already exists"):
-            m.run(self.args)
+        def write_bad(*_args, **_kwargs):
+            (self.root / "desktop-observation.ppm").write_bytes(b"invalid screenshot bytes")
+        with patch.object(m.Path, "is_socket", return_value=True), patch.object(m.subprocess, "run", side_effect=write_bad):
+            with self.assertRaisesRegex(ValueError, "invalid PPM"):
+                m.run(self.args)
 
 
 if __name__ == "__main__":
