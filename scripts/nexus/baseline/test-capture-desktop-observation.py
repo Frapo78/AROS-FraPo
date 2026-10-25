@@ -47,6 +47,17 @@ class CaptureTests(unittest.TestCase):
                 m.run(self.args)
             runner.assert_not_called()
 
+    def test_valid_ppm_capture_writes_manifest(self):
+        def create_ppm(*_args, **_kwargs):
+            (self.root / "desktop-observation.ppm").write_bytes(b"P6\\n2 1\\n255\\n" + b"\\xff\\x00\\x00\\x00\\xff\\x00")
+        with patch.object(m.Path, "is_socket", return_value=True), patch.object(m.subprocess, "run", side_effect=create_ppm):
+            m.run(self.args)
+        proof = (self.root / "desktop-observation.txt").read_text()
+        self.assertIn("FORMAT=nexus-desktop-observation-v1\\n", proof)
+        self.assertIn("WANDERER_VERIFICATION=unverified\\n", proof)
+        self.assertIn("SCREENSHOT_SHA256=", proof)
+        self.assertNotIn("\\\\n", proof)
+
     def test_sha_matches(self):
         data = b"abc"
         path = self.root / "data"
