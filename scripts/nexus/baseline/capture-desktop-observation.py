@@ -34,15 +34,15 @@ def run(args):
     if not screenshot.is_file() or screenshot.stat().st_size < 16:
         raise ValueError("screenshot missing or empty")
     data = screenshot.read_bytes()
-    if not re.match(rb"^P6\\s+[0-9]+\\s+[0-9]+\\s+255\\s", data):
+    if not re.match(rb"^P6\s+[0-9]+\s+[0-9]+\s+255\s", data):
         raise ValueError("invalid PPM output")
     observation.write_text(
-        "FORMAT=nexus-desktop-observation-v1\\n"
-        "CAPTURED_UTC=" + datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") + "\\n"
-        "RUN_MANIFEST_SHA256=" + sha(manifest) + "\\n"
-        "SCREENSHOT=desktop-observation.ppm\\n"
-        "SCREENSHOT_SHA256=" + sha(screenshot) + "\\n"
-        "WANDERER_VERIFICATION=unverified\\n",
+        "FORMAT=nexus-desktop-observation-v1\n"
+        "CAPTURED_UTC=" + datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") + "\n"
+        "RUN_MANIFEST_SHA256=" + sha(manifest) + "\n"
+        "SCREENSHOT=desktop-observation.ppm\n"
+        "SCREENSHOT_SHA256=" + sha(screenshot) + "\n"
+        "WANDERER_VERIFICATION=unverified\n",
         encoding="utf-8",
     )
     print("Captured unverified desktop observation:", screenshot)
