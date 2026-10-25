@@ -1,0 +1,26 @@
+name: Nexus desktop evidence tests
+
+on:
+  pull_request:
+    branches: [nexus/main]
+    paths:
+      - 'scripts/nexus/baseline/verify-desktop-evidence.py'
+      - 'scripts/nexus/baseline/test-verify-desktop-evidence.py'
+      - '.github/workflows/nexus-desktop-evidence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-evidence-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Compile Python sources
+        run: python3 -m py_compile scripts/nexus/baseline/verify-desktop-evidence.py scripts/nexus/baseline/test-verify-desktop-evidence.py
+      - name: Run adversarial unit tests
+        run: python3 scripts/nexus/baseline/test-verify-desktop-evidence.py -v
