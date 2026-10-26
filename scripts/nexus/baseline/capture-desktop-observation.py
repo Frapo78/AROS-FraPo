@@ -7,7 +7,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
-import re
+from ppm_evidence import MAX_PPM_BYTES, validate_ppm_bytes
 import subprocess
 import sys
 
@@ -31,11 +31,12 @@ def run(args):
         raise ValueError("QEMU HMP monitor socket unavailable")
     script = Path(__file__).with_name("capture-qemu-screen.py")
     subprocess.run([sys.executable, str(script), str(monitor), str(screenshot)], check=True, timeout=20)
-    if not screenshot.is_file() or screenshot.stat().st_size < 16:
-        raise ValueError("screenshot missing or empty")
+    if screenshot.is_symlink() or not screenshot.is_file():
+        raise ValueError("screenshot missing or symlink")
+    if screenshot.stat().st_size > MAX_PPM_BYTES:
+        raise ValueError("PPM exceeds bounded evidence size")
     data = screenshot.read_bytes()
-    if not re.match(rb"^P6\s+[0-9]+\s+[0-9]+\s+255\s", data):
-        raise ValueError("invalid PPM output")
+    validate_ppm_bytes(data)
     observation.write_text(
         "FORMAT=nexus-desktop-observation-v1\n"
         "CAPTURED_UTC=" + datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") + "\n"
