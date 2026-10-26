@@ -56,7 +56,37 @@ class CaptureTests(unittest.TestCase):
         self.assertIn("FORMAT=nexus-desktop-observation-v1\n", proof)
         self.assertIn("WANDERER_VERIFICATION=unverified\n", proof)
         self.assertIn("SCREENSHOT_SHA256=", proof)
-        self.assertNotIn("\\\n", proof)
+        self.assertNotIn("\\n", proof)
+
+    def test_truncated_ppm_is_failure(self):
+        def write_truncated(*_args, **_kwargs):
+            (self.root / "desktop-observation.ppm").write_bytes(
+                b"P6\n2 1\n255\n" + b"\xff\x00\x00\x00\xff")
+        with patch.object(m.Path, "is_socket", return_value=True), patch.object(
+            m.subprocess, "run", side_effect=write_truncated
+        ):
+            with self.assertRaisesRegex(ValueError, "payload length mismatch"):
+                m.run(self.args)
+
+    def test_extra_ppm_bytes_are_failure(self):
+        def write_extra(*_args, **_kwargs):
+            (self.root / "desktop-observation.ppm").write_bytes(
+                b"P6\n2 1\n255\n" + b"\xff\x00\x00\x00\xff\x00\x00")
+        with patch.object(m.Path, "is_socket", return_value=True), patch.object(
+            m.subprocess, "run", side_effect=write_extra
+        ):
+            with self.assertRaisesRegex(ValueError, "payload length mismatch"):
+                m.run(self.args)
+
+    def test_invalid_dimensions_are_failure(self):
+        def write_bad_size(*_args, **_kwargs):
+            (self.root / "desktop-observation.ppm").write_bytes(
+                b"P6\n999999999 999999999\n255\n" + b"\x00" * 6)
+        with patch.object(m.Path, "is_socket", return_value=True), patch.object(
+            m.subprocess, "run", side_effect=write_bad_size
+        ):
+            with self.assertRaisesRegex(ValueError, "dimensions exceed"):
+                m.run(self.args)
 
     def test_sha_matches(self):
         data = b"abc"
