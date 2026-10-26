@@ -1,0 +1,116 @@
+# G2c desktop evidence — host-only, opt-in, experimental
+
+This procedure belongs to issue #3 and draft PR #30. It is not a boot
+certificate, a protection proof or an automatic Wanderer detector.
+
+## Preconditions
+
+- Read root `AGENTS.md` and the accepted ADR-0002 before changing this flow.
+- Keep the tested baseline pinned until G1/G2 have been independently rerun.
+- Obtain a real G1 ISO and its sibling `build-manifest.txt` from the
+  reference build harness in draft PR #24. The ISO's path, SHA-256 and source
+  SHA must match the manifest exactly.
+- Install `qemu-system-x86_64` on the execution host.
+- Use a **new** absolute result directory; the runner refuses overwrite.
+- This path is manual only. Do not add a scheduled or push-triggered QEMU build.
+
+## Bounded diagnostic observation (not G2c)
+
+```sh
+python3 scripts/nexus/baseline/run-desktop-observation.py \
+  /absolute/path/to/aros-pc-x86_64.iso \
+  /absolute/path/to/new-g2c-result \
+  120
+```
+
+The runner uses one x86-64 TCG vCPU, 1024 MiB RAM, no network and a
+120-second observation window by default (allowed range: 10–600 seconds).
+It records the source and ISO hashes, QEMU identity, serial log and run status.
+If the VM is still alive and its HMP monitor is available, it attempts a
+framebuffer dump into `desktop-observation.ppm` and binds its SHA-256 to
+`desktop-observation.txt` and `run-manifest.txt`.
+
+The capture validator accepts only QEMU's canonical P6 format with an exact
+pixel count and a 16 MiB total limit. A blank screen, boot splash, or any other
+framebuffer content can be **captured**; it cannot be called Wanderer solely
+because the PPM file is valid.
+
+If QEMU exits early, times out without a valid capture, or produces malformed
+data, preserve the partial result directory and the serial log. Do not
+rewrite the run status to imply a successful boot.
+
+## Independent human gate
+
+**Current blocker:** the diagnostic runner uses `-display none` and does
+not expose an interactive desktop. A screenshot cannot establish that
+Wanderer is *usable*. Do **not** produce a positive G2c claim from this
+runner alone. A future opt-in interactive session must permit the reviewer
+to operate the *same* guest instance and record a reproducible interaction
+(e.g. open and close a Wanderer drawer, with observed input response).
+
+Once that same-run interaction is possible and observed, a human may create
+`desktop-evidence.txt` in the same result directory. Its required fields
+are shown below; replace the placeholder hashes and timestamp with the
+actual values, and use the reviewer identity of the person who interacted
+with the VM:
+
+```text
+FORMAT=nexus-desktop-evidence-v1
+RUN_MANIFEST_SHA256=<sha256 of run-manifest.txt>
+SOURCE_SHA=<SOURCE_SHA from run-manifest.txt>
+ISO_SHA256=<ISO_SHA256 from run-manifest.txt>
+VISUAL_RESULT=wanderer-usable
+HUMAN_VERIFIED=yes
+REVIEWER=<human reviewer>
+REVIEWED_UTC=<YYYY-MM-DDTHH:MM:SSZ, not before CAPTURED_UTC>
+SCREENSHOT=desktop-observation.ppm
+SCREENSHOT_SHA256=<sha256 of desktop-observation.ppm>
+```
+
+Then validate the package:
+
+```sh
+python3 scripts/nexus/baseline/verify-desktop-evidence.py \
+  /absolute/path/to/new-g2c-result
+```
+
+The verifier requires `desktop-observation.txt` to bind the same run
+manifest and screenshot, and requires human review after capture. It rejects
+missing, symlinked, truncated, overlong, noncanonical or rehashed-unbound
+evidence. The reviewer identity is a **self-assertion**, not a cryptographic
+signature. A successful verifier result means only that the supplied human
+assertion is structurally consistent with the capture package.
+
+## Evidence and gates
+
+- **E1:** Python syntax and GitHub workflow policy checks.
+- **E2:** parser/capture/verifier adversarial tests.
+- **E3:** combined host-side CI suites (not AROS boot integration).
+- **E4:** pending real deterministic QEMU G2b/G2c observation.
+- **H0:** host evidence tooling; **human visual + interaction review**
+  still mandatory before a G2c usability claim.
+- **H1/H2/H3:** not exercised by this host-only change.
+- **L0–L5:** no Nexus runtime isolation property is demonstrated.
+- **U:** AROS boot/Exec/DOS/Wanderer. **N:** Nexus host evidence tools.
+  **A:** none. **B0–B3:** not applicable. Machine privilege remains
+  legacy-owned.
+
+## Three reviews and stop conditions
+
+1. **Construction:** parser is bounded and fail-closed; evidence is never
+   overwritten; QEMU remains a diagnostic process.
+2. **Integration:** compare with the current upstream head and tested
+   baseline; no kernel, ABI, SMP or device authority changes; run host CI.
+3. **Evidence Red Team:** attempt forged, missing, duplicate, rehashed,
+   truncated and mismatched screenshot/manifest packages, and a review
+   timestamp earlier than capture. Re-run tests after any parser change.
+
+**NO TEST, EXPLAIN WHY:** this host-only PR cannot demonstrate a responsive
+Wanderer because it does not build/boot a real ISO with an interactive
+viewer. Strongest remaining false-positive scenario: a reviewer signs a
+perfectly hash-consistent boot splash as "usable Wanderer". The required
+next evidence is a real G1-bound QEMU session with interactive same-run
+input, independent human observation and the preserved capture chain.
+
+Do not merge this draft as a completed G2c milestone or advance BASELINE.md
+until the missing evidence and relevant reviews exist.
