@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host-only positive and adversarial tests for G2c evidence."""
+"""Host-only positive and adversarial tests for bound G2c evidence."""
 import hashlib
 import importlib.util
 from pathlib import Path
@@ -22,14 +22,37 @@ class EvidenceTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.run = self.root / "run-manifest.txt"
+        self.observation = self.root / "desktop-observation.txt"
         self.proof = self.root / "desktop-evidence.txt"
-        self.screen = self.root / "screen.ppm"
+        self.screen = self.root / "desktop-observation.ppm"
         self.screen.write_bytes(b"P6\n2 1\n255\n" + b"\xff\x00\x00\x00\xff\x00")
-        self.run.write_text("SOURCE_SHA=" + "a"*40 + "\nISO_SHA256=" + "b"*64 + "\nQEMU_SHA256=" + "c"*64 + "\nQEMU_VERSION=QEMU test\nFINAL_STATUS=timeout-unverified\n")
+        self.run.write_text(
+            "FORMAT=nexus-qemu-v0\nSOURCE_SHA=" + "a" * 40 +
+            "\nISO_SHA256=" + "b" * 64 +
+            "\nQEMU_SHA256=" + "c" * 64 +
+            "\nQEMU_VERSION=QEMU test\nFINAL_STATUS=timeout-unverified\n")
         self.refresh()
 
     def refresh(self):
-        self.proof.write_text("FORMAT=nexus-desktop-evidence-v1\nRUN_MANIFEST_SHA256=" + sha(self.run.read_bytes()) + "\nSOURCE_SHA=" + "a"*40 + "\nISO_SHA256=" + "b"*64 + "\nVISUAL_RESULT=wanderer-usable\nHUMAN_VERIFIED=yes\nREVIEWER=human-reviewer\nREVIEWED_UTC=2026-10-25T10:00:00Z\nSCREENSHOT=screen.ppm\nSCREENSHOT_SHA256=" + sha(self.screen.read_bytes()) + "\n")
+        run_sha = sha(self.run.read_bytes())
+        screen_sha = sha(self.screen.read_bytes())
+        self.observation.write_text(
+            "FORMAT=nexus-desktop-observation-v1\n"
+            "CAPTURED_UTC=2026-10-25T09:59:00Z\n"
+            "RUN_MANIFEST_SHA256=" + run_sha +
+            "\nSCREENSHOT=desktop-observation.ppm\n"
+            "SCREENSHOT_SHA256=" + screen_sha +
+            "\nWANDERER_VERIFICATION=unverified\n")
+        self.proof.write_text(
+            "FORMAT=nexus-desktop-evidence-v1\n"
+            "RUN_MANIFEST_SHA256=" + run_sha +
+            "\nSOURCE_SHA=" + "a" * 40 +
+            "\nISO_SHA256=" + "b" * 64 +
+            "\nVISUAL_RESULT=wanderer-usable\n"
+            "HUMAN_VERIFIED=yes\nREVIEWER=human-reviewer\n"
+            "REVIEWED_UTC=2026-10-25T10:00:00Z\n"
+            "SCREENSHOT=desktop-observation.ppm\n"
+            "SCREENSHOT_SHA256=" + screen_sha + "\n")
 
     def reject(self):
         with self.assertRaises((ValueError, OSError)):
@@ -47,7 +70,7 @@ class EvidenceTests(unittest.TestCase):
         self.reject()
 
     def test_duplicate_manifest_key(self):
-        self.run.write_text(self.run.read_text() + "SOURCE_SHA=" + "a"*40 + "\n")
+        self.run.write_text(self.run.read_text() + "SOURCE_SHA=" + "a" * 40 + "\n")
         self.refresh()
         self.reject()
 
@@ -61,7 +84,8 @@ class EvidenceTests(unittest.TestCase):
         self.reject()
 
     def test_path_traversal(self):
-        self.proof.write_text(self.proof.read_text().replace("SCREENSHOT=screen.ppm", "SCREENSHOT=../screen.ppm"))
+        self.proof.write_text(self.proof.read_text().replace(
+            "SCREENSHOT=desktop-observation.ppm", "SCREENSHOT=../desktop-observation.ppm"))
         self.reject()
 
     def test_bad_ppm(self):
@@ -71,6 +95,61 @@ class EvidenceTests(unittest.TestCase):
 
     def test_missing_provenance(self):
         self.run.write_text(self.run.read_text().replace("QEMU_VERSION=QEMU test\n", ""))
+        self.refresh()
+        self.reject()
+
+    def test_missing_capture_observation(self):
+        self.observation.unlink()
+        self.reject()
+
+    def test_unbound_capture_run(self):
+        self.observation.write_text(self.observation.read_text().replace(
+            "RUN_MANIFEST_SHA256=", "RUN_MANIFEST_SHA256=0"))
+        self.reject()
+
+    def test_unbound_capture_screenshot(self):
+        self.observation.write_text(self.observation.read_text().replace(
+            "SCREENSHOT_SHA256=", "SCREENSHOT_SHA256=0"))
+        self.reject()
+
+    def test_rehashed_truncated_ppm(self):
+        self.screen.write_bytes(self.screen.read_bytes()[:-1])
+        self.refresh()
+        self.reject()
+
+    def test_rehashed_extra_pixels(self):
+        self.screen.write_bytes(self.screen.read_bytes() + b"\x00")
+        self.refresh()
+        self.reject()
+
+    def test_capture_review_order(self):
+        self.proof.write_text(self.proof.read_text().replace(
+            "REVIEWED_UTC=2026-10-25T10:00:00Z", "REVIEWED_UTC=2026-10-25T09:58:00Z"))
+        self.reject()
+
+    def test_symlinked_screenshot(self):
+        original = self.root / "other.ppm"
+        self.screen.rename(original)
+        self.screen.symlink_to(original)
+        self.reject()
+
+    def test_invalid_captured_date(self):
+        self.observation.write_text(self.observation.read_text().replace(
+            "CAPTURED_UTC=2026-10-25", "CAPTURED_UTC=2026-99-25"))
+        self.reject()
+
+    def test_capture_must_not_claim_verified(self):
+        self.observation.write_text(self.observation.read_text().replace(
+            "WANDERER_VERIFICATION=unverified", "WANDERER_VERIFICATION=verified"))
+        self.reject()
+
+    def test_capture_filename_mismatch(self):
+        self.observation.write_text(self.observation.read_text().replace(
+            "SCREENSHOT=desktop-observation.ppm", "SCREENSHOT=other.ppm"))
+        self.reject()
+
+    def test_noncanonical_ppm(self):
+        self.screen.write_bytes(self.screen.read_bytes().replace(b"2 1\n", b"2\t1\n"))
         self.refresh()
         self.reject()
 
