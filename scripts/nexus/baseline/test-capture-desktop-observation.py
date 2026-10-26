@@ -103,7 +103,7 @@ class CaptureTests(unittest.TestCase):
         def write_bad(*_args, **_kwargs):
             (self.root / "desktop-observation.ppm").write_bytes(b"invalid screenshot bytes")
         with patch.object(m.Path, "is_socket", return_value=True), patch.object(m.subprocess, "run", side_effect=write_bad):
-            with self.assertRaisesRegex(ValueError, "invalid PPM"):
+            with self.assertRaisesRegex(ValueError, "invalid canonical P6 header"):
                 m.run(self.args)
 
 
