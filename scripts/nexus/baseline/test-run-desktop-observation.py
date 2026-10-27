@@ -92,7 +92,12 @@ class RunnerTests(unittest.TestCase):
 
     def test_socket_path_byte_limit(self):
         with self.assertRaisesRegex(ValueError, "UNIX socket path too long"):
-            m.validate_socket_paths(Path("/tmp") / ("é" * 60), True)
+            m.validate_socket_paths(Path("/tmp") / ("a" * 110), True)
+
+    def test_hmp_unsafe_path_rejected_before_qemu(self):
+        self.out = self.root / "space in path"
+        self.reject("unsupported HMP characters")
+        self.assertFalse(self.out.exists())
 
     def test_sha(self):
         self.assertEqual(len(m.sha(self.iso)), 64)
