@@ -30,7 +30,7 @@ class EvidenceTests(unittest.TestCase):
             "FORMAT=nexus-qemu-v0\nSOURCE_SHA=" + "a" * 40 +
             "\nISO_SHA256=" + "b" * 64 +
             "\nQEMU_SHA256=" + "c" * 64 +
-            "\nQEMU_VERSION=QEMU test\nFINAL_STATUS=timeout-unverified\n")
+            "\nQEMU_VERSION=QEMU test\nINTERACTIVE_MODE=unix-vnc\nFINAL_STATUS=timeout-unverified\n")
         self.refresh()
 
     def refresh(self):
@@ -71,6 +71,30 @@ class EvidenceTests(unittest.TestCase):
 
     def test_duplicate_manifest_key(self):
         self.run.write_text(self.run.read_text() + "SOURCE_SHA=" + "a" * 40 + "\n")
+        self.refresh()
+        self.reject()
+
+    def test_headless_run_cannot_claim_usable_wanderer(self):
+        self.run.write_text(self.run.read_text().replace(
+            "INTERACTIVE_MODE=unix-vnc", "INTERACTIVE_MODE=none"))
+        self.refresh()
+        self.reject()
+
+    def test_missing_interactive_mode_rejected(self):
+        self.run.write_text(self.run.read_text().replace(
+            "INTERACTIVE_MODE=unix-vnc\n", ""))
+        self.refresh()
+        self.reject()
+
+    def test_unknown_interactive_mode_rejected(self):
+        self.run.write_text(self.run.read_text().replace(
+            "INTERACTIVE_MODE=unix-vnc", "INTERACTIVE_MODE=tcp-vnc"))
+        self.refresh()
+        self.reject()
+
+    def test_early_guest_exit_rejected(self):
+        self.run.write_text(self.run.read_text().replace(
+            "timeout-unverified", "qemu-exited-unverified"))
         self.refresh()
         self.reject()
 
