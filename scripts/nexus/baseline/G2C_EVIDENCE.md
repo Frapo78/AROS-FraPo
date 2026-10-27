@@ -23,7 +23,7 @@ python3 scripts/nexus/baseline/run-desktop-observation.py \
   120
 ```
 
-The runner uses one x86-64 TCG vCPU, 1024 MiB RAM, no network and a
+The runner uses one x86-64 TCG vCPU, 1024 MiB RAM, no guest network and a
 120-second observation window by default (allowed range: 10–600 seconds).
 It records the source and ISO hashes, QEMU identity, serial log and run status.
 If the VM is still alive and its HMP monitor is available, it attempts a
@@ -39,14 +39,50 @@ If QEMU exits early, times out without a valid capture, or produces malformed
 data, preserve the partial result directory and the serial log. Do not
 rewrite the run status to imply a successful boot.
 
+## Opt-in local interactive observation (still not G2c PASS)
+
+Use a local UNIX-domain VNC socket only. This is a deliberate opt-in, not
+enabled by the default diagnostic command. It does not expose TCP VNC or
+guest networking. QEMU's documented `-vnc unix:<socket-path>` syntax is
+used; the new result directory is created with mode 0700 and both UNIX
+sockets are removed when the bounded guest exits.
+
+```sh
+python3 scripts/nexus/baseline/run-desktop-observation.py \
+  /absolute/path/to/aros-pc-x86_64.iso \
+  /short/absolute/new-g2c-interactive \
+  300 --interactive
+```
+
+During the 300-second window, connect a UNIX-socket-capable viewer on
+the same host (for example, TigerVNC):
+
+```sh
+vncviewer /short/absolute/new-g2c-interactive/vnc.sock
+```
+
+Use a short result path: UNIX socket paths longer than 100 bytes are
+rejected before QEMU starts. Do not relay this unauthenticated socket
+over the internet or add TCP forwarding. A reviewer should open and close
+a Wanderer drawer and observe an actual input response *before* the
+runner's timeout. The final screenshot is captured from that same guest
+after the interaction window. Preserve serial log, run manifest, machine
+capture and screenshot; the run manifest records
+`INTERACTIVE_MODE=unix-vnc`.
+
+A headless run records `INTERACTIVE_MODE=none` and **cannot** pass the
+human G2c verifier. An early QEMU exit is also rejected. Neither the
+existence of a VNC socket nor the manifest field proves that a human
+connected or interacted: the subsequent human assertion remains mandatory.
+
 ## Independent human gate
 
-**Current blocker:** the diagnostic runner uses `-display none` and does
-not expose an interactive desktop. A screenshot cannot establish that
-Wanderer is *usable*. Do **not** produce a positive G2c claim from this
-runner alone. A future opt-in interactive session must permit the reviewer
-to operate the *same* guest instance and record a reproducible interaction
-(e.g. open and close a Wanderer drawer, with observed input response).
+**Current blocker:** no actual interactive Wanderer run and independent
+human input-response confirmation have been recorded. The opt-in VNC
+mode makes such a same-run observation possible but does not establish
+it automatically. A screenshot cannot establish that Wanderer is usable.
+Do **not** produce a positive G2c claim from a headless capture, a boot
+splash, or an unreviewed VNC session.
 
 Once that same-run interaction is possible and observed, a human may create
 `desktop-evidence.txt` in the same result directory. Its required fields
@@ -75,7 +111,8 @@ python3 scripts/nexus/baseline/verify-desktop-evidence.py \
 ```
 
 The verifier requires `desktop-observation.txt` to bind the same run
-manifest and screenshot, and requires human review after capture. It rejects
+manifest and screenshot, requires `INTERACTIVE_MODE=unix-vnc` with a
+live-guest timeout, and requires human review after capture. It rejects
 missing, symlinked, truncated, overlong, noncanonical or rehashed-unbound
 evidence. The reviewer identity is a **self-assertion**, not a cryptographic
 signature. A successful verifier result means only that the supplied human
@@ -106,8 +143,8 @@ assertion is structurally consistent with the capture package.
    timestamp earlier than capture. Re-run tests after any parser change.
 
 **NO TEST, EXPLAIN WHY:** this host-only PR cannot demonstrate a responsive
-Wanderer because it does not build/boot a real ISO with an interactive
-viewer. Strongest remaining false-positive scenario: a reviewer signs a
+Wanderer without a real G1-bound ISO, a QEMU run with the interactive
+viewer and a separate human observation. Strongest remaining false-positive scenario: a reviewer signs a
 perfectly hash-consistent boot splash as "usable Wanderer". The required
 next evidence is a real G1-bound QEMU session with interactive same-run
 input, independent human observation and the preserved capture chain.
