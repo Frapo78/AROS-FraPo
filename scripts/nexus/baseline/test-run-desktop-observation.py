@@ -61,6 +61,39 @@ class RunnerTests(unittest.TestCase):
         with patch.object(m.shutil, "which", return_value=None):
             self.reject("QEMU not installed")
 
+    def test_headless_command_has_no_vnc_listener(self):
+        args = m.qemu_command(Path("/usr/bin/qemu-system-x86_64"), self.iso, self.out, False)
+        self.assertEqual(args[args.index("-display") + 1], "none")
+        self.assertNotIn("-vnc", args)
+        self.assertEqual(args[args.index("-nic") + 1], "none")
+
+    def test_interactive_command_is_unix_vnc_only(self):
+        args = m.qemu_command(Path("/usr/bin/qemu-system-x86_64"), self.iso, self.out, True)
+        self.assertNotIn("-display", args)
+        self.assertEqual(args[args.index("-vnc") + 1], "unix:" + str(self.out / "vnc.sock"))
+        self.assertEqual(args[args.index("-nic") + 1], "none")
+        self.assertNotIn("-netdev", args)
+        self.assertNotIn("-websocket", args)
+
+    def test_interactive_cli_is_explicit_opt_in(self):
+        with patch.object(m, "run", return_value=0) as runner:
+            self.assertEqual(m.main([str(self.iso), str(self.out), "30", "--interactive"]), 0)
+            runner.assert_called_once_with(str(self.iso), str(self.out), 30, True)
+
+    def test_default_cli_is_headless(self):
+        with patch.object(m, "run", return_value=0) as runner:
+            self.assertEqual(m.main([str(self.iso), str(self.out)]), 0)
+            runner.assert_called_once_with(str(self.iso), str(self.out), 120, False)
+
+    def test_socket_path_too_long(self):
+        self.out = self.root / ("x" * 100)
+        self.reject("UNIX socket path too long")
+        self.assertFalse(self.out.exists())
+
+    def test_socket_path_byte_limit(self):
+        with self.assertRaisesRegex(ValueError, "UNIX socket path too long"):
+            m.validate_socket_paths(Path("/tmp") / ("é" * 60), True)
+
     def test_sha(self):
         self.assertEqual(len(m.sha(self.iso)), 64)
 
