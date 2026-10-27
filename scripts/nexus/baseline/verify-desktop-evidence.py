@@ -57,8 +57,12 @@ def verify(folder):
     for key in ("ISO_SHA256", "QEMU_SHA256"):
         if not re.fullmatch(r"[0-9a-f]{64}", run[key]):
             raise ValueError("invalid SHA: " + key)
-    if run["FINAL_STATUS"] not in ("timeout-unverified", "vm-exited-unverified"):
-        raise ValueError("not a desktop observation run")
+    # A human usability claim requires a live guest with an explicitly
+    # enabled local interactive console; headless screenshots are diagnostic.
+    if run.get("INTERACTIVE_MODE") != "unix-vnc":
+        raise ValueError("human G2c proof requires an interactive UNIX VNC run")
+    if run["FINAL_STATUS"] != "timeout-unverified":
+        raise ValueError("guest exited before interactive capture")
 
     run_sha = hashlib.sha256(run_path.read_bytes()).hexdigest()
     if observation.get("FORMAT") != "nexus-desktop-observation-v1":
