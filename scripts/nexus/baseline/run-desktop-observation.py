@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Opt-in, bounded x86-64 QEMU desktop observation (not a G2c PASS).
+"""Bounded x86-64 QEMU observation, optionally interactive over local UNIX VNC.
 
-Usage: python3 run-desktop-observation.py ISO RESULT_DIR [seconds]
-Requires QEMU and a successful G1 build-manifest.txt alongside ISO.
+This host diagnostic does not independently prove that Wanderer is usable.
+A human must operate the same guest and review the captured framebuffer.
 """
+import argparse
 import hashlib
+import os
 from pathlib import Path
 import re
 import shutil
@@ -14,12 +16,16 @@ import time
 
 
 def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def fields(path):
     result = {}
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         if "=" not in line:
             raise ValueError("invalid manifest line")
         key, val = line.split("=", 1)
@@ -29,7 +35,33 @@ def fields(path):
     return result
 
 
-def run(iso, out, seconds=120):
+def validate_socket_paths(out, interactive):
+    # Linux sun_path is typically 108 bytes, macOS often shorter. Fail early
+    # rather than silently starting a guest without an accessible console.
+    paths = [out / "hmp.sock"]
+    if interactive:
+        paths.append(out / "vnc.sock")
+    if any(len(os.fsencode(str(path))) > 100 for path in paths):
+        raise ValueError("UNIX socket path too long (max 100 bytes)")
+
+
+def qemu_command(qemu, iso, out, interactive):
+    monitor = out / "hmp.sock"
+    args = [str(qemu), "-machine", "pc", "-accel", "tcg,thread=single",
+            "-cpu", "qemu64", "-smp", "1", "-m", "1024",
+            "-boot", "order=d,menu=off", "-cdrom", str(iso),
+            "-nic", "none", "-serial", "file:" + str(out / "serial.log"),
+            "-monitor", "unix:" + str(monitor) + ",server=on,wait=off",
+            "-no-reboot"]
+    if interactive:
+        # No TCP/WebSocket listener. The directory is created mode 0700.
+        args += ["-vnc", "unix:" + str(out / "vnc.sock")]
+    else:
+        args += ["-display", "none"]
+    return args
+
+
+def run(iso, out, seconds=120, interactive=False):
     iso, out = Path(iso).resolve(), Path(out).resolve()
     if not iso.is_file() or not iso.stat().st_size:
         raise ValueError("missing ISO")
@@ -45,36 +77,36 @@ def run(iso, out, seconds=120):
         raise ValueError("output already exists")
     if not 10 <= seconds <= 600:
         raise ValueError("duration must be 10..600 seconds")
+    validate_socket_paths(out, interactive)
     qemu = shutil.which("qemu-system-x86_64")
     if not qemu:
         raise ValueError("QEMU not installed")
     qemu = Path(qemu).resolve()
-    out.mkdir(parents=True)
+    out.mkdir(parents=True, mode=0o700)
     sock = out / "hmp.sock"
+    vnc = out / "vnc.sock"
     screen = out / "desktop-observation.ppm"
-    log = out / "serial.log"
     manifest = out / "run-manifest.txt"
-    args = [str(qemu), "-machine", "pc", "-accel", "tcg,thread=single",
-            "-cpu", "qemu64", "-smp", "1", "-m", "1024",
-            "-boot", "order=d,menu=off", "-cdrom", str(iso),
-            "-nic", "none", "-display", "none", "-serial", "file:" + str(log),
-            "-monitor", "unix:" + str(sock) + ",server=on,wait=off", "-no-reboot"]
+    args = qemu_command(qemu, iso, out, interactive)
     proc = None
     try:
         proc = subprocess.Popen(args, stdin=subprocess.DEVNULL)
+        if interactive:
+            print("Local VNC socket:", vnc, flush=True)
+            print("Connect a UNIX-socket-capable VNC viewer now; interact before the timeout.", flush=True)
         deadline = time.monotonic() + seconds
         while proc.poll() is None and time.monotonic() < deadline:
             time.sleep(min(1, max(0, deadline - time.monotonic())))
-        if proc.poll() is not None:
-            status = "qemu-exited-unverified"
-        else:
-            status = "timeout-unverified"
+        status = "qemu-exited-unverified" if proc.poll() is not None else "timeout-unverified"
         manifest.write_text(
             "FORMAT=nexus-qemu-v0\nSOURCE_SHA=" + data["SOURCE_SHA"] +
             "\nISO_SHA256=" + sha(iso) +
             "\nQEMU_SHA256=" + sha(qemu) +
-            "\nQEMU_VERSION=" + subprocess.check_output([str(qemu), "--version"], text=True).splitlines()[0] +
-            "\nFINAL_STATUS=" + status + "\n")
+            "\nQEMU_VERSION=" + subprocess.check_output([str(qemu), "--version"], text=True, timeout=10).splitlines()[0] +
+            "\nINTERACTIVE_MODE=" + ("unix-vnc" if interactive else "none") +
+            "\nFINAL_STATUS=" + status + "\n", encoding="utf-8")
+        if interactive and not vnc.is_socket():
+            raise ValueError("local VNC socket unavailable; no interactive evidence")
         if proc.poll() is None and sock.is_socket():
             subprocess.run([sys.executable, str(Path(__file__).with_name("capture-desktop-observation.py")), str(out), str(sock)],
                            check=True, timeout=30)
@@ -88,12 +120,23 @@ def run(iso, out, seconds=120):
                 proc.kill()
                 proc.wait(timeout=5)
         sock.unlink(missing_ok=True)
+        vnc.unlink(missing_ok=True)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("iso")
+    parser.add_argument("result_directory")
+    parser.add_argument("seconds", nargs="?", type=int, default=120)
+    parser.add_argument("--interactive", action="store_true",
+                        help="enable local UNIX VNC only (no TCP listener)")
+    args = parser.parse_args(argv)
+    try:
+        return run(args.iso, args.result_directory, args.seconds, args.interactive)
+    except (ValueError, OSError, subprocess.SubprocessError) as exc:
+        print("desktop observation failed:", exc, file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4):
-        sys.exit("usage: run-desktop-observation.py ISO RESULT_DIR [seconds]")
-    try:
-        sys.exit(run(sys.argv[1], sys.argv[2], int(sys.argv[3]) if len(sys.argv) == 4 else 120))
-    except (ValueError, OSError, subprocess.SubprocessError) as exc:
-        sys.exit("desktop observation failed: " + str(exc))
+    sys.exit(main())
