@@ -61,8 +61,9 @@ the same host (for example, TigerVNC):
 vncviewer /short/absolute/new-g2c-interactive/vnc.sock
 ```
 
-Use a short result path: UNIX socket paths longer than 100 bytes are
-rejected before QEMU starts. Do not relay this unauthenticated socket
+Use a short result path without spaces or shell/HMP metacharacters: UNIX
+socket paths longer than 100 bytes, or paths unsafe for HMP, are rejected
+before QEMU starts. Do not relay this unauthenticated socket
 over the internet or add TCP forwarding. A reviewer should open and close
 a Wanderer drawer and observe an actual input response *before* the
 runner's timeout. The final screenshot is captured from that same guest
