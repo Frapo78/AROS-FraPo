@@ -36,6 +36,10 @@ def fields(path):
 
 
 def validate_socket_paths(out, interactive):
+    # The HMP screenshot helper intentionally rejects spaces and command
+    # separators; reject incompatible result paths before starting QEMU.
+    if not re.fullmatch(r"[/A-Za-z0-9_.-]+", str(out / "desktop-observation.ppm")):
+        raise ValueError("output path contains unsupported HMP characters")
     # Linux sun_path is typically 108 bytes, macOS often shorter. Fail early
     # rather than silently starting a guest without an accessible console.
     paths = [out / "hmp.sock"]
