@@ -25,7 +25,7 @@ python3 scripts/nexus/baseline/run-desktop-observation.py \
 
 The runner uses one x86-64 TCG vCPU, 1024 MiB RAM, no guest network and a
 120-second observation window by default (allowed range: 10–600 seconds).
-It records the source and ISO hashes, QEMU identity, serial log and run status.
+It records the source and ISO hashes, QEMU identity, serial log and run status. The ISO is hashed again after the guest window: if the bytes changed, the runner writes `FINAL_STATUS=iso-changed-unverified`, preserves both `ISO_SHA256` and `ISO_SHA256_AFTER`, and refuses to capture desktop evidence.
 If the VM is still alive and its HMP monitor is available, it attempts a
 framebuffer dump into `desktop-observation.ppm` and binds its SHA-256 to
 `desktop-observation.txt` and `run-manifest.txt`.
@@ -113,7 +113,7 @@ python3 scripts/nexus/baseline/verify-desktop-evidence.py \
 
 The verifier requires `desktop-observation.txt` to bind the same run
 manifest and screenshot, requires `INTERACTIVE_MODE=unix-vnc` with a
-live-guest timeout, and requires human review after capture. It rejects
+live-guest timeout, and requires human review after capture. It requires matching pre/post-run ISO hashes, including the post-run field, and rejects
 missing, symlinked, truncated, overlong, noncanonical or rehashed-unbound
 evidence. The reviewer identity is a **self-assertion**, not a cryptographic
 signature. A successful verifier result means only that the supplied human
@@ -123,7 +123,7 @@ assertion is structurally consistent with the capture package.
 
 - **E1:** Python syntax and GitHub workflow policy checks.
 - **E2:** parser/capture/verifier adversarial tests.
-- **E3:** combined host-side CI suites (not AROS boot integration).
+- **E3:** full host runner + HMP capture lifecycle exercised with a synthetic UNIX-socket QEMU substitute in CI (not AROS boot integration).
 - **E4:** pending real deterministic QEMU G2b/G2c observation.
 - **H0:** host evidence tooling; **human visual + interaction review**
   still mandatory before a G2c usability claim.
@@ -139,7 +139,7 @@ assertion is structurally consistent with the capture package.
    overwritten; QEMU remains a diagnostic process.
 2. **Integration:** compare with the current upstream head and tested
    baseline; no kernel, ABI, SMP or device authority changes; run host CI.
-3. **Evidence Red Team:** attempt forged, missing, duplicate, rehashed,
+3. **Evidence Red Team:** attempt ISO mutation during a live synthetic guest, forged, missing, duplicate, rehashed,
    truncated and mismatched screenshot/manifest packages, and a review
    timestamp earlier than capture. Re-run tests after any parser change.
 
