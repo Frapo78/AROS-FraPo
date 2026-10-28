@@ -152,3 +152,38 @@ input, independent human observation and the preserved capture chain.
 
 Do not merge this draft as a completed G2c milestone or advance BASELINE.md
 until the missing evidence and relevant reviews exist.
+
+## Capture-window provenance red team (2026-10-28)
+
+**Goal:** prevent a screenshot from being retained as usable evidence if either the
+G1 ISO or its build manifest changes between the first provenance check and
+completion of the HMP capture. **Non-goals:** proving guest boot, proving a
+human actually used Wanderer, defending against a malicious host or TOCTOU
+changes after the final hash check.
+
+**Preconditions:** successful SHA-bound G1 artifact, fixed source SHA, local
+QEMU, bounded observation. **Ownership:** U = AROS boot and desktop; N = host
+capture/provenance tooling; A = none. B0-B3 not applicable; hardware authority
+remains legacy-owned. No L0-L5 security claim.
+
+**Acceptance:** ISO and G1 manifest remain byte-identical across capture;
+otherwise the runner returns nonzero, removes both PPM and observation manifest,
+and records `POST_CAPTURE_PROVENANCE=changed` in the run manifest.
+
+**Negative evidence:** fake QEMU changes the ISO or build manifest while
+handling `screendump`; both must be rejected. Tests are host integration E3,
+not a real AROS QEMU E4 run. **Human gate:** H0 for host tooling. No hardware
+H2 requirement for this host-only property; G2c still requires a real QEMU
+session and human desktop review.
+
+**Review 1 — Construction:** post-capture hash check and fail-closed deletion;
+no new kernel/ABI code. **Review 2 — Integration:** same opt-in runner and
+existing synthetic HMP integration path, no automatic ISO retention or
+baseline promotion; latest upstream remains independent. **Review 3 — Red
+Team:** ISO and manifest mutation during screendump. Residual risks include
+host compromise, deliberate human misrepresentation, and a change after the
+final check; none of these can be excluded by the present tests.
+
+**Stop:** no merge while required CI is failing, no G2c PASS without actual
+Wanderer interaction, and no Phase 1 kernel implementation without Phase 0
+exit evidence. Logical integrator: Frapo78 on `nexus/g2-desktop-evidence`.
