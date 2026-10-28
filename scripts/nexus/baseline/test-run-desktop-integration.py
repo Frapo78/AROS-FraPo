@@ -54,6 +54,10 @@ while True:
         if command.startswith("screendump "):
             path = Path(command[len("screendump "):])
             path.write_bytes(b"P6\n2 1\n255\n" + bytes([255, 0, 0, 0, 255, 0]))
+            if (iso.parent / "mutate-during-capture").exists():
+                iso.write_bytes(b"ISO changed after first provenance check")
+            if (iso.parent / "mutate-manifest-during-capture").exists():
+                (iso.parent / "build-manifest.txt").write_text("tampered")
 '''
 
 
