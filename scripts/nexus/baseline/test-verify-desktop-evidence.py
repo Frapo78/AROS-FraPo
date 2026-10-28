@@ -29,6 +29,7 @@ class EvidenceTests(unittest.TestCase):
         self.run.write_text(
             "FORMAT=nexus-qemu-v0\nSOURCE_SHA=" + "a" * 40 +
             "\nISO_SHA256=" + "b" * 64 +
+            "\nISO_SHA256_AFTER=" + "b" * 64 +
             "\nQEMU_SHA256=" + "c" * 64 +
             "\nQEMU_VERSION=QEMU test\nINTERACTIVE_MODE=unix-vnc\nFINAL_STATUS=timeout-unverified\n")
         self.refresh()
@@ -114,6 +115,18 @@ class EvidenceTests(unittest.TestCase):
 
     def test_bad_ppm(self):
         self.screen.write_bytes(b"not a ppm screenshot")
+        self.refresh()
+        self.reject()
+
+    def test_iso_mutation_with_rehashed_manifests_rejected(self):
+        self.run.write_text(self.run.read_text().replace(
+            "ISO_SHA256_AFTER=" + "b" * 64, "ISO_SHA256_AFTER=" + "d" * 64))
+        self.refresh()
+        self.reject()
+
+    def test_missing_post_run_iso_hash_rejected(self):
+        self.run.write_text(self.run.read_text().replace(
+            "ISO_SHA256_AFTER=" + "b" * 64 + "\n", ""))
         self.refresh()
         self.reject()
 
