@@ -57,6 +57,10 @@ def verify(folder):
     for key in ("ISO_SHA256", "QEMU_SHA256"):
         if not re.fullmatch(r"[0-9a-f]{64}", run[key]):
             raise ValueError("invalid SHA: " + key)
+    # A screenshot must be bound to the same ISO before and after QEMU ran.
+    # Do not accept a self-consistent human proof if the guest media changed.
+    if run.get("ISO_SHA256_AFTER") != run["ISO_SHA256"]:
+        raise ValueError("missing or mismatched post-run ISO SHA")
     # A human usability claim requires a live guest with an explicitly
     # enabled local interactive console; headless screenshots are diagnostic.
     if run.get("INTERACTIVE_MODE") != "unix-vnc":
