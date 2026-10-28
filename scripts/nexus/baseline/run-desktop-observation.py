@@ -74,6 +74,7 @@ def run(iso, out, seconds=120, interactive=False):
     if data.get("FINAL_STATUS") != "success" or data.get("EXIT_CODE") != "0":
         raise ValueError("G1 not successful")
     initial_iso_sha = sha(iso)
+    initial_build_sha = sha(build)
     if data.get("ARTIFACT") != str(iso) or data.get("ARTIFACT_SHA256") != initial_iso_sha:
         raise ValueError("G1 artifact hash or path mismatch")
     if not re.fullmatch(r"[0-9a-f]{40}", data.get("SOURCE_SHA", "")):
@@ -124,6 +125,14 @@ def run(iso, out, seconds=120, interactive=False):
         if proc.poll() is None and sock.is_socket():
             subprocess.run([sys.executable, str(Path(__file__).with_name("capture-desktop-observation.py")), str(out), str(sock)],
                            check=True, timeout=30)
+        # Recheck after the capture: QEMU can still read the ISO during HMP.
+        # Never retain positive-looking evidence from a changed artifact or G1 manifest.
+        if sha(iso) != initial_iso_sha or sha(build) != initial_build_sha:
+            screen.unlink(missing_ok=True)
+            (out / "desktop-observation.txt").unlink(missing_ok=True)
+            with manifest.open("a", encoding="utf-8") as stream:
+                stream.write("POST_CAPTURE_PROVENANCE=changed\n")
+            return 1
         return 0 if screen.is_file() else 1
     finally:
         if proc is not None and proc.poll() is None:
