@@ -73,7 +73,8 @@ def run(iso, out, seconds=120, interactive=False):
     data = fields(build)
     if data.get("FINAL_STATUS") != "success" or data.get("EXIT_CODE") != "0":
         raise ValueError("G1 not successful")
-    if data.get("ARTIFACT") != str(iso) or data.get("ARTIFACT_SHA256") != sha(iso):
+    initial_iso_sha = sha(iso)
+    if data.get("ARTIFACT") != str(iso) or data.get("ARTIFACT_SHA256") != initial_iso_sha:
         raise ValueError("G1 artifact hash or path mismatch")
     if not re.fullmatch(r"[0-9a-f]{40}", data.get("SOURCE_SHA", "")):
         raise ValueError("invalid source SHA")
@@ -101,14 +102,23 @@ def run(iso, out, seconds=120, interactive=False):
         deadline = time.monotonic() + seconds
         while proc.poll() is None and time.monotonic() < deadline:
             time.sleep(min(1, max(0, deadline - time.monotonic())))
-        status = "qemu-exited-unverified" if proc.poll() is not None else "timeout-unverified"
+        final_iso_sha = sha(iso)
+        iso_changed = final_iso_sha != initial_iso_sha
+        status = ("iso-changed-unverified" if iso_changed else
+                  "qemu-exited-unverified" if proc.poll() is not None else
+                  "timeout-unverified")
         manifest.write_text(
             "FORMAT=nexus-qemu-v0\nSOURCE_SHA=" + data["SOURCE_SHA"] +
-            "\nISO_SHA256=" + sha(iso) +
+            "\nISO_SHA256=" + initial_iso_sha +
+            "\nISO_SHA256_AFTER=" + final_iso_sha +
             "\nQEMU_SHA256=" + sha(qemu) +
             "\nQEMU_VERSION=" + subprocess.check_output([str(qemu), "--version"], text=True, timeout=10).splitlines()[0] +
             "\nINTERACTIVE_MODE=" + ("unix-vnc" if interactive else "none") +
             "\nFINAL_STATUS=" + status + "\n", encoding="utf-8")
+        # A guest that read a different ISO invalidates the G1 binding.
+        # Preserve the failed run manifest but never create desktop evidence.
+        if iso_changed:
+            return 1
         if interactive and not vnc.is_socket():
             raise ValueError("local VNC socket unavailable; no interactive evidence")
         if proc.poll() is None and sock.is_socket():
