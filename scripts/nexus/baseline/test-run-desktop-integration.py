@@ -28,6 +28,8 @@ if "--version" in sys.argv:
 iso = Path(sys.argv[sys.argv.index("-cdrom") + 1])
 if (iso.parent / "exit-early").exists():
     sys.exit(7)
+if (iso.parent / "mutate-iso").exists():
+    iso.write_bytes(b"ISO mutated while QEMU was running")
 monitor = sys.argv[sys.argv.index("-monitor") + 1]
 assert monitor.startswith("unix:") and monitor.endswith(",server=on,wait=off")
 monitor_path = monitor[5:].split(",", 1)[0]
@@ -88,6 +90,14 @@ class HostIntegrationTests(unittest.TestCase):
         self.assertFalse((self.out / "vnc.sock").exists())
         self.assertFalse((self.out / "desktop-evidence.txt").exists())
         self.assertEqual(self.out.stat().st_mode & 0o777, 0o700)
+
+    def test_iso_mutated_during_guest_cannot_create_evidence(self):
+        (self.root / "mutate-iso").write_text("1")
+        self.assertEqual(self.run_fake(True), 1)
+        manifest = (self.out / "run-manifest.txt").read_text()
+        self.assertIn("FINAL_STATUS=iso-changed-unverified\\n", manifest)
+        self.assertFalse((self.out / "desktop-observation.ppm").exists())
+        self.assertFalse((self.out / "desktop-evidence.txt").exists())
 
     def test_early_guest_exit_cannot_create_capture(self):
         (self.root / "exit-early").write_text("1")
