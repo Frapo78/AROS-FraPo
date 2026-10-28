@@ -13,6 +13,7 @@ on:
       - 'scripts/nexus/baseline/capture-qemu-screen.py'
       - 'scripts/nexus/baseline/run-desktop-observation.py'
       - 'scripts/nexus/baseline/test-run-desktop-observation.py'
+      - 'scripts/nexus/baseline/test-run-desktop-integration.py'
       - '.github/workflows/nexus-desktop-evidence.yml'
   workflow_dispatch:
 
@@ -28,10 +29,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Compile Python sources
-        run: python3 -m py_compile scripts/nexus/baseline/ppm_evidence.py scripts/nexus/baseline/test-ppm-evidence.py scripts/nexus/baseline/verify-desktop-evidence.py scripts/nexus/baseline/test-verify-desktop-evidence.py scripts/nexus/baseline/capture-desktop-observation.py scripts/nexus/baseline/test-capture-desktop-observation.py scripts/nexus/baseline/capture-qemu-screen.py scripts/nexus/baseline/run-desktop-observation.py scripts/nexus/baseline/test-run-desktop-observation.py
+        run: python3 -m py_compile scripts/nexus/baseline/ppm_evidence.py scripts/nexus/baseline/test-ppm-evidence.py scripts/nexus/baseline/verify-desktop-evidence.py scripts/nexus/baseline/test-verify-desktop-evidence.py scripts/nexus/baseline/capture-desktop-observation.py scripts/nexus/baseline/test-capture-desktop-observation.py scripts/nexus/baseline/capture-qemu-screen.py scripts/nexus/baseline/run-desktop-observation.py scripts/nexus/baseline/test-run-desktop-observation.py scripts/nexus/baseline/test-run-desktop-integration.py
       - name: Run adversarial unit tests
         run: |
           python3 scripts/nexus/baseline/test-ppm-evidence.py -v
           python3 scripts/nexus/baseline/test-verify-desktop-evidence.py -v
           python3 scripts/nexus/baseline/test-capture-desktop-observation.py -v
           python3 scripts/nexus/baseline/test-run-desktop-observation.py -v
+          python3 scripts/nexus/baseline/test-run-desktop-integration.py -v
