@@ -95,7 +95,7 @@ class HostIntegrationTests(unittest.TestCase):
         (self.root / "mutate-iso").write_text("1")
         self.assertEqual(self.run_fake(True), 1)
         manifest = (self.out / "run-manifest.txt").read_text()
-        self.assertIn("FINAL_STATUS=iso-changed-unverified\\n", manifest)
+        self.assertIn("FINAL_STATUS=iso-changed-unverified\n", manifest)
         self.assertFalse((self.out / "desktop-observation.ppm").exists())
         self.assertFalse((self.out / "desktop-evidence.txt").exists())
 
