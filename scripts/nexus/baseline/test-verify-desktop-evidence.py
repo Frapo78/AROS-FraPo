@@ -124,6 +124,16 @@ class EvidenceTests(unittest.TestCase):
         self.refresh()
         self.reject()
 
+    def test_post_capture_failure_rejected_even_with_rehashed_proof(self):
+        self.run.write_text(self.run.read_text() + "POST_CAPTURE_PROVENANCE=changed\n")
+        self.refresh()
+        self.reject()
+
+    def test_unknown_post_capture_marker_rejected_even_with_rehashed_proof(self):
+        self.run.write_text(self.run.read_text() + "POST_CAPTURE_PROVENANCE=ok\n")
+        self.refresh()
+        self.reject()
+
     def test_missing_post_run_iso_hash_rejected(self):
         self.run.write_text(self.run.read_text().replace(
             "ISO_SHA256_AFTER=" + "b" * 64 + "\n", ""))
