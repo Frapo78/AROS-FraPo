@@ -65,6 +65,18 @@ def qemu_command(qemu, iso, out, interactive):
     return args
 
 
+
+def stop_qemu(proc):
+    """Reap the guest before the final provenance check."""
+    if proc is not None and proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
+
+
 def run(iso, out, seconds=120, interactive=False):
     iso, out = Path(iso).resolve(), Path(out).resolve()
     if not iso.is_file() or not iso.stat().st_size:
@@ -125,8 +137,9 @@ def run(iso, out, seconds=120, interactive=False):
         if proc.poll() is None and sock.is_socket():
             subprocess.run([sys.executable, str(Path(__file__).with_name("capture-desktop-observation.py")), str(out), str(sock)],
                            check=True, timeout=30)
-        # Recheck after the capture: QEMU can still read the ISO during HMP.
-        # Never retain positive-looking evidence from a changed artifact or G1 manifest.
+        # Stop and reap the guest before final hashing: it may still modify
+        # media on shutdown. No guest process may run after this check.
+        stop_qemu(proc)
         if sha(iso) != initial_iso_sha or sha(build) != initial_build_sha:
             screen.unlink(missing_ok=True)
             (out / "desktop-observation.txt").unlink(missing_ok=True)
@@ -135,13 +148,7 @@ def run(iso, out, seconds=120, interactive=False):
             return 1
         return 0 if screen.is_file() else 1
     finally:
-        if proc is not None and proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait(timeout=5)
+        stop_qemu(proc)
         sock.unlink(missing_ok=True)
         vnc.unlink(missing_ok=True)
 
