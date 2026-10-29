@@ -218,3 +218,33 @@ compatibility, no kernel/ABI changes, and latest upstream. **Review 3:**
 test mutation during capture, mutation on shutdown, and forged/rehashed
 post-failure packages. **Stop conditions:** any failed CI, missing real
 QEMU ISO, or absent human interaction keeps the PR draft and G2c blocked.
+
+## G1 symlink provenance preflight (2026-10-29)
+
+**Goal:** reject redirectable ISO and sibling G1 manifest paths before
+launching QEMU. **Non-goals:** hostile-host filesystem isolation, atomic
+snapshotting, boot or Wanderer verification. **Preconditions:** ordinary
+SHA-bound G1 files; a new observation directory.
+
+**Ownership:** U = AROS runtime; N = host runner and adversarial tests;
+A = none; B0-B3 not applicable. All CR3/IRQ/MMIO/DMA and device authority
+remain legacy-owned. No L0-L5 isolation claim.
+
+**Acceptance:** symlinked ISO or `build-manifest.txt` raises an error before
+creating an output directory or launching QEMU. **Negative tests:** replace
+either G1 input with a symlink to otherwise valid bytes; both must fail.
+Required automated evidence: focused runner tests in CI (E2); real QEMU E4
+and a human Wanderer interaction are separate outstanding G2c gates.
+Human gate H0 for this host-only tooling; H1/H2/H3 not invoked.
+
+**Review 1 — Construction:** early input validation before hashing and process
+creation; no ABI, kernel, or guest changes. **Review 2 — Integration:** existing
+G1 manifest fields and QEMU invocation unchanged; upstream ownership intact.
+**Review 3 — Evidence Red Team:** both symlinked input cases; the strongest
+remaining attack is a malicious host swapping regular files between checks.
+The host cannot be treated as a hostile security boundary; a future test would
+need an atomic input snapshot or file-descriptor-based provenance protocol.
+
+**Stop:** CI must be green before merge; no G2c acceptance without actual
+QEMU/Wanderer and human observation. Integrator: Frapo78; branch:
+`nexus/g2-desktop-evidence`.
