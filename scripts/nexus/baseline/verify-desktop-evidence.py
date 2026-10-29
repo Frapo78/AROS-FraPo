@@ -61,6 +61,10 @@ def verify(folder):
     # Do not accept a self-consistent human proof if the guest media changed.
     if run.get("ISO_SHA256_AFTER") != run["ISO_SHA256"]:
         raise ValueError("missing or mismatched post-run ISO SHA")
+    # A post-capture failure must never be reclassified as usable desktop
+    # merely by rebuilding the observation and proof hashes.
+    if "POST_CAPTURE_PROVENANCE" in run:
+        raise ValueError("post-capture provenance was invalidated")
     # A human usability claim requires a live guest with an explicitly
     # enabled local interactive console; headless screenshots are diagnostic.
     if run.get("INTERACTIVE_MODE") != "unix-vnc":
