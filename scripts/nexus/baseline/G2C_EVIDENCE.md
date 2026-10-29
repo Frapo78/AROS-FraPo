@@ -187,3 +187,34 @@ final check; none of these can be excluded by the present tests.
 **Stop:** no merge while required CI is failing, no G2c PASS without actual
 Wanderer interaction, and no Phase 1 kernel implementation without Phase 0
 exit evidence. Logical integrator: Frapo78 on `nexus/g2-desktop-evidence`.
+
+## Shutdown-bound provenance gate (2026-10-29)
+
+**Goal:** a QEMU process must not be able to change the ISO or G1 manifest
+after the final evidence hash and before process shutdown. **Non-goals:**
+host compromise resistance, automated Wanderer recognition, or any L0-L5
+isolation proof. **Preconditions:** the same SHA-bound G1 ISO and bounded,
+manual QEMU observation used above. **Owner:** N host tooling; U guest AROS;
+A none; B0-B3 not applicable; machine authority legacy-owned. Integrator:
+Frapo78, issue #3, draft PR #30.
+
+**Acceptance:** capture while the guest is alive, stop/reap QEMU, then
+re-hash both ISO and G1 manifest. A mutation during capture **or shutdown**
+must return failure, delete both observation files and retain a run manifest
+marked `POST_CAPTURE_PROVENANCE=changed`. The human G2c verifier must
+reject that marker even if someone reconstructs and re-hashes an otherwise
+internally consistent screenshot/manifest package.
+
+**Negative tests:** a fake QEMU changes the ISO on SIGTERM; a second
+synthetic attack modifies the G1 manifest during HMP capture; a forged
+package rebinds all hashes despite the explicit provenance failure marker.
+These are E2/E3 host-only tests, not a real AROS E4 run. Required human
+evidence for G2c remains a live same-run interaction with Wanderer.
+H0 applies to the tooling; no H1/H2/H3 or L0-L5 claim is advanced.
+
+**Review 1:** check lifecycle cleanup, kill fallback and hash ordering.
+**Review 2:** check Linux/macOS host portability, existing G1 manifest
+compatibility, no kernel/ABI changes, and latest upstream. **Review 3:**
+test mutation during capture, mutation on shutdown, and forged/rehashed
+post-failure packages. **Stop conditions:** any failed CI, missing real
+QEMU ISO, or absent human interaction keeps the PR draft and G2c blocked.
