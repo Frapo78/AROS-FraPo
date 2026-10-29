@@ -29,6 +29,21 @@ class RunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, phrase):
             m.run(self.iso, self.out, seconds)
 
+    def test_symlinked_iso_rejected(self):
+        target = self.root / "real.iso"
+        self.iso.rename(target)
+        self.iso.symlink_to(target)
+        self.reject("symlinked ISO")
+        self.assertFalse(self.out.exists())
+
+    def test_symlinked_manifest_rejected(self):
+        manifest = self.root / "build-manifest.txt"
+        target = self.root / "real-manifest.txt"
+        manifest.rename(target)
+        manifest.symlink_to(target)
+        self.reject("symlinked G1 manifest")
+        self.assertFalse(self.out.exists())
+
     def test_missing_iso(self):
         self.iso.unlink()
         self.reject("missing ISO")
