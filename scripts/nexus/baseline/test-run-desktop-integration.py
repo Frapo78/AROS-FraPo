@@ -20,12 +20,18 @@ FAKE_QEMU = r'''#!/usr/bin/env python3
 import os
 from pathlib import Path
 import socket
+import signal
 import sys
 
 if "--version" in sys.argv:
     print("QEMU synthetic-host-test 0.1")
     sys.exit(0)
 iso = Path(sys.argv[sys.argv.index("-cdrom") + 1])
+def on_terminate(_signum, _frame):
+    if (iso.parent / "mutate-on-shutdown").exists():
+        iso.write_bytes(b"ISO changed by QEMU shutdown")
+    sys.exit(0)
+signal.signal(signal.SIGTERM, on_terminate)
 if (iso.parent / "exit-early").exists():
     sys.exit(7)
 if (iso.parent / "mutate-iso").exists():
@@ -110,6 +116,15 @@ class HostIntegrationTests(unittest.TestCase):
                       (self.out / "run-manifest.txt").read_text().splitlines())
         self.assertFalse((self.out / "desktop-observation.ppm").exists())
         self.assertFalse((self.out / "desktop-observation.txt").exists())
+
+    def test_iso_mutated_on_qemu_shutdown_removes_evidence(self):
+        (self.root / "mutate-on-shutdown").write_text("1")
+        self.assertEqual(self.run_fake(True), 1)
+        self.assertIn("POST_CAPTURE_PROVENANCE=changed",
+                      (self.out / "run-manifest.txt").read_text().splitlines())
+        self.assertFalse((self.out / "desktop-observation.ppm").exists())
+        self.assertFalse((self.out / "desktop-observation.txt").exists())
+        self.assertFalse((self.out / "desktop-evidence.txt").exists())
 
     def test_iso_mutated_during_guest_cannot_create_evidence(self):
         (self.root / "mutate-iso").write_text("1")
