@@ -78,10 +78,17 @@ def stop_qemu(proc):
 
 
 def run(iso, out, seconds=120, interactive=False):
-    iso, out = Path(iso).resolve(), Path(out).resolve()
+    # Reject symlinked inputs before resolving them; evidence must name
+    # ordinary files rather than redirectable source paths.
+    iso_input = Path(iso).absolute()
+    if iso_input.is_symlink():
+        raise ValueError("symlinked ISO")
+    iso, out = iso_input.resolve(), Path(out).resolve()
     if not iso.is_file() or not iso.stat().st_size:
         raise ValueError("missing ISO")
     build = iso.parent / "build-manifest.txt"
+    if build.is_symlink():
+        raise ValueError("symlinked G1 manifest")
     data = fields(build)
     if data.get("FINAL_STATUS") != "success" or data.get("EXIT_CODE") != "0":
         raise ValueError("G1 not successful")
