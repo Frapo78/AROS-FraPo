@@ -98,16 +98,16 @@ class HostIntegrationTests(unittest.TestCase):
     def test_iso_mutated_during_capture_removes_evidence(self):
         (self.root / "mutate-during-capture").write_text("1")
         self.assertEqual(self.run_fake(True), 1)
-        self.assertIn("POST_CAPTURE_PROVENANCE=changed\\n",
-                      (self.out / "run-manifest.txt").read_text())
+        self.assertIn("POST_CAPTURE_PROVENANCE=changed",
+                      (self.out / "run-manifest.txt").read_text().splitlines())
         self.assertFalse((self.out / "desktop-observation.ppm").exists())
         self.assertFalse((self.out / "desktop-observation.txt").exists())
 
     def test_g1_manifest_mutated_during_capture_removes_evidence(self):
         (self.root / "mutate-manifest-during-capture").write_text("1")
         self.assertEqual(self.run_fake(False), 1)
-        self.assertIn("POST_CAPTURE_PROVENANCE=changed\\n",
-                      (self.out / "run-manifest.txt").read_text())
+        self.assertIn("POST_CAPTURE_PROVENANCE=changed",
+                      (self.out / "run-manifest.txt").read_text().splitlines())
         self.assertFalse((self.out / "desktop-observation.ppm").exists())
         self.assertFalse((self.out / "desktop-observation.txt").exists())
 
