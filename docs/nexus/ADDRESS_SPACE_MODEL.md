@@ -499,3 +499,109 @@ P1.1 is complete when:
 - no ABI v1 structure layout changes;
 - reference AROS reaches Wanderer;
 - the change is small enough to review independently of later multi-address-space work.
+
+## 23. P0.8 upstream protection/shootdown checkpoint (2026-10-31)
+
+This is a **source audit, not a protection implementation or a boot gate**.
+Reviewed upstream `aros-development-team/AROS:master` at
+`a9e77d13349a6bf7f8006f79f94a1ad4dc3cfac2`, after 32 commits
+since the prior tracking head `605324895363789d6508d2adff6e3f119dc8dca8`.
+The tested baseline remains `2edd46536d08e3b54ecd1315f337a9b7de896f3a`.
+The older tested baseline already has the local-only protection invalidation
+and bounded split-pool behavior below; these are **not newly attributed
+regressions**.
+
+### Falsifiable findings
+
+1. `arch/x86_64-pc/kernel/setprotection.c` converts
+   `MAP_Readable | MAP_Writable | MAP_Executable` into *present*,
+   and changes writable/user permissions through `core_ProtKernelArea()`.
+   It does not set NX, request a remote TLB shootdown, or return a status.
+   Do not treat `KrnSetProtection()` as a protected executable-permission
+   or synchronous revocation primitive.
+2. `arch/x86_64-pc/kernel/mmu.c:core_ProtPage()` serializes edits
+   with `core_PageTableLock()`, then performs a local `invlpg`.
+   A shared mapping used by another CPU may still have a stale translation;
+   this is a **testable risk**, not an observed runtime failure.
+3. The same function uses a fixed 32-page split-PTE pool. When the pool is
+   exhausted, it logs and returns without changing the requested mapping.
+   `core_ProtKernelArea()` and the public `KrnSetProtection()` do not
+   propagate this failure. A multi-page request may therefore have no
+   externally reported all-or-nothing result.
+4. `arch/x86_64-pc/kernel/mapglobal.c` and `unmapglobal.c` do
+   request a remote IPI flush after the local flush, but select **async**
+   in supervisor or interrupt-disabled contexts. Their successful return
+   cannot be assumed to mean remote permission revocation is complete.
+   `arch/all-pc/kernel/kernel_ipi.c` distinguishes asynchronous hooks
+   from synchronous acknowledgement waits. These helpers operate on the
+   existing shared-root design, not a Nexus-owned address-space contract.
+5. The 32 newly tracked upstream commits include changes to
+   `arch/all-pc/kernel/smp.c`, `smp_exec.c`, `apic.h`,
+   `rom/kernel/kernel_intr.c` and `rom/exec/remtask.c`.
+   Any later kernel implementation must recheck CPU scheduling, interrupt
+   delivery and task lifetime against that upstream head.
+
+### Task contract and required evidence
+
+**Goal:** make the missing synchronous permission-revocation and
+error-reporting contracts explicit before AS1/AS2. **Non-goals:** patching
+upstream, introducing a Nexus mapping ABI, declaring a security level,
+moving the baseline, or beginning P1.1. **Preconditions:** root
+`AGENTS.md`, accepted ADR-0002, and source at the pinned upstream SHA.
+**Ownership:** U = upstream x86-64 MMU, kernel/Exec, IPI and SMP;
+N = this Nexus audit; A = none. Existing direct shared-root APIs are B0;
+no B1/B2/B3 crossing is introduced. CR3/page tables, privilege,
+IDT/APIC/interrupts, physical memory, PCI/MMIO, DMA/IOMMU and device
+ownership remain **legacy-owned**.
+
+**Acceptance (this audit):** exact source locations, explicit exclusions,
+and reproducible negative scenarios. **Negative criteria:** reject any
+inference that a local `invlpg`, a successful async map/unmap, or a void
+protection call proves global revocation, NX or isolation.
+
+**Required future executable tests (not yet run):**
+
+- On a G1-bound, two-vCPU QEMU boot, warm CPU 1's TLB for a shared page,
+  revoke write/present permission from CPU 0, and observe whether CPU 1
+  can still access it before a confirmed acknowledgement. Log CPU IDs,
+  IPI completion, page-fault codes and the exact mapping generation.
+- Exercise both interrupt-enabled and `Disable()`/supervisor mapping
+  paths; prove that the latter does not silently become a synchronous
+  revocation guarantee.
+- Exhaust the split-PTE pool using distinct 2 MiB mappings, verify
+  unchanged mappings and partial-update behavior, and require an
+  observable failure result before adapting the API for protected use.
+- Attempt instruction fetch from a non-executable mapping; require a
+  real NX page fault before any AS2/W^X claim.
+
+**Evidence:** ten mechanical source assertions passed (E1); no E2/E3
+kernel execution or E4 current-upstream QEMU boot was performed.
+**NO TEST, EXPLAIN WHY:** the current upstream SHA has no retained,
+G1-bound ISO and there is no two-vCPU fault/shootdown guest harness in
+this task. The strongest counterexamples are a remote stale writable
+TLB entry and a silently unchanged mapping after split-pool exhaustion.
+These need a bootable, instrumented guest and observable fault results.
+Human gate H0 applies to this documentation-only change; H1 is mandatory
+for any kernel/ABI fix, H2 for hardware-dependent IRQ/DMA claims and H3
+for strong release isolation claims. No L0-L5 security level is proven.
+**Stop:** do not start P1.1 or merge a kernel fix on this evidence alone.
+Logical integrator: Frapo78; issue #14.
+
+### Three review passes
+
+- **Review 1 — Construction:** source calls, return paths, local
+  invalidation and fixed split-pool failure inspected; no runtime code
+  changed. The audit avoids adding a speculative abstraction.
+- **Review 2 — Integration:** checked current upstream and the tested
+  baseline separately; no ABI, SMP, scheduler or MMU source is changed
+  in this branch. Future work must account for the new upstream SMP/IRQ
+  changes before implementation.
+- **Review 3 — Evidence Red Team:** tried to falsify synchronous
+  revocation and total-success assumptions with ten source assertions.
+  Source patterns cannot settle the race: the two-vCPU negative tests
+  above remain required.
+
+**Residual risk:** source inspection cannot establish whether a
+particular stale translation is exploitable, how IPI scheduling behaves
+under load, or whether the pool limit is reached in ordinary workloads.
+Do not turn this audit into a claim of observed isolation failure.
