@@ -26,6 +26,8 @@ static inline enum nexus_mapping_status
 nexus_mapping_validate(uint32_t rights, int hardware_nx_supported)
 {
     const uint32_t allowed = NEXUS_MAP_READ | NEXUS_MAP_WRITE | NEXUS_MAP_EXECUTE;
+    if (hardware_nx_supported != 0 && hardware_nx_supported != 1)
+        return NEXUS_MAP_INVALID;
     if ((rights & ~allowed) != 0u || (rights & NEXUS_MAP_READ) == 0u)
         return NEXUS_MAP_INVALID;
     if ((rights & NEXUS_MAP_WRITE) && (rights & NEXUS_MAP_EXECUTE))
