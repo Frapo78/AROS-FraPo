@@ -26,3 +26,32 @@ cc -std=c11 -Wall -Wextra -Werror -pedantic -o /tmp/nexus-mapping-test nexus/exp
 1. Construction: no allocation, mutable state, pointer or machine instruction; explicit input validation.
 2. Integration: isolated directory, no AROS build or ABI change; later MMU integration requires a new H1 review.
 3. Evidence Red Team: negative cases in host test reject unknown flags, W+X, missing READ and missing NX. The strongest untested failure is mismatch between policy and real x86-64 PTE/NX semantics. **NO TEST, EXPLAIN WHY:** host tests cannot prove MMU enforcement; requires actual QEMU fault tests after G1/G2a.
+
+## NX capability input hardening (2026-11-01)
+
+**Task contract:** Goal: reject nonboolean NX capability inputs rather than treating
+any nonzero integer as confirmed hardware NX. Non-goals: PTE manipulation, kernel
+integration, public ABI, or hardware isolation. Preconditions: existing standalone
+C11 mapping-rights contract on PR #29. U: AROS runtime untouched. N: experimental
+header and host tests. A: none; B0-B3: no boundary exists. Integrator: Frapo78.
+Acceptance: values 0 and 1 retain their behavior; -1 and 2 reject; 256 rights
+patterns times four NX inputs plus 20 high-bit probes all match the oracle.
+Negative criterion: no unknown NX state may return OK. Automated evidence:
+focused host test with warnings-as-errors and UBSan (E2). Human gate: H0 for
+host-only prototype, H1 before MMU integration. Hardware evidence: not applicable
+to this host-only patch; E4 QEMU fault tests required for future MMU claims.
+Security: no L0-L5 demonstrated. Stop: failing test or unexpected AROS linkage.
+
+**Review 1 Construction:** A single fail-closed guard before rights processing;
+no allocation, lifetime, shared state, ABI or error-path expansion.
+**Review 2 Integration:** No upstream/kernel/ABI changes; upstream
+`bf196e7dc17f879d0eeb7b86446e14160df65b5b` reviewed.
+**Review 3 Evidence Red Team:** On the original code, READ with NX=-1 returned
+OK (failing test); after the guard, 1,044 focused cases passed locally with
+UBSan. Test: `cc -std=c11 -Wall -Wextra -Werror -pedantic -fsanitize=undefined
+-o /tmp/nexus-nx-test nexus/experimental/tests/mapping_nx_input_test.c &&
+/tmp/nexus-nx-test`. CI has not yet been observed on the branch.
+**NO TEST, EXPLAIN WHY:** These host tests cannot establish actual NX/PTE
+enforcement or TLB behavior. Strongest untested failure: CPU executes a
+supposedly non-executable page. Requires G1-bound deterministic QEMU fault
+testing and H1 before integration. Evidence E2 is host-only, not E4.
