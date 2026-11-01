@@ -1,0 +1,141 @@
+name: Nexus monthly ISO candidate
+
+on:
+  schedule:
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+    inputs:
+      milestone:
+        description: 'Milestone label (letters, digits, dot, underscore or dash)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-iso-release
+  cancel-in-progress: false
+
+jobs:
+  build-verify-publish:
+    if: github.ref == 'refs/heads/nexus/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      BUILDTHREADS: '2'
+      NEXUS_PROFILE: diagnostic
+      NEXUS_QEMU_MODE: headless
+      NEXUS_QEMU_MEMORY_MIB: '1024'
+      NEXUS_QEMU_CPUS: '1'
+      NEXUS_QEMU_TIMEOUT_SECONDS: '60'
+      NEXUS_QEMU_EXPECT_MARKER: 'AROS64 - The AROS Research OS'
+      NEXUS_WORK_ROOT: ${{ runner.temp }}/nexus-iso
+      GH_TOKEN: ${{ github.token }}
+      MILESTONE_INPUT: ${{ inputs.milestone || '' }}
+    steps:
+      - name: Check out exact Nexus main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Validate release context and milestone
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$MILESTONE_INPUT" =~ ^[A-Za-z0-9._-]{0,40}$ ]] || exit 1
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF" = refs/heads/nexus/main
+          test -f scripts/nexus/baseline/build-x86_64.sh
+          test -f scripts/nexus/baseline/run-qemu-x86_64.sh
+
+      - name: Install pinned-profile AROS and QEMU prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            libpng-dev zlib1g-dev libxcursor-dev libgl1-mesa-dev libasound2-dev \
+            gawk bison flex netpbm automake cmake genisoimage \
+            python3-mako python3-yaml python3-distutils-extra \
+            libswitch-perl gperf gcc-multilib g++ ccache libclang-dev \
+            jlha-utils wget liblzma-dev mtools xorriso nasm qemu-system-x86
+
+      - name: Build fresh diagnostic boot ISO
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/nexus/baseline/build-x86_64.sh
+          mapfile -t isos < <(find "$NEXUS_WORK_ROOT/runs" -type f -path '*/artifacts/aros-pc-x86_64.iso' -print)
+          test "${#isos[@]}" -eq 1
+          iso="${isos[0]}"
+          test -s "$iso"
+          printf '%s\n' "$iso" > "$RUNNER_TEMP/iso-path"
+
+      - name: Verify GRUB provenance and actual QEMU serial marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          iso="$(cat "$RUNNER_TEMP/iso-path")"
+          bash scripts/nexus/baseline/capture-iso-grub.sh "$iso" "$RUNNER_TEMP/nexus-grub"
+          python3 scripts/nexus/baseline/prepare-serial-grub.py --check "$RUNNER_TEMP/nexus-grub/grub.cfg"
+          manifest="$(dirname "$iso")/build-manifest.txt"
+          get() { awk -F= -v key="$1" '$1==key {print substr($0,length(key)+2)}' "$2"; }
+          test "$(get ARTIFACT_SHA256 "$manifest")" = "$(sha256sum "$iso" | cut -d' ' -f1)"
+          test "$(get ISO_SHA256 "$RUNNER_TEMP/nexus-grub/provenance.txt")" = "$(get ARTIFACT_SHA256 "$manifest")"
+          test "$(get GRUB_SHA256 "$RUNNER_TEMP/nexus-grub/provenance.txt")" = "$(get GRUB_AFTER_SHA256 "$manifest")"
+          scripts/nexus/baseline/run-qemu-x86_64.sh "$iso" "$RUNNER_TEMP/nexus-qemu-result"
+          grep -qx 'FINAL_STATUS=marker-reached' "$RUNNER_TEMP/nexus-qemu-result/run-manifest.txt"
+          grep -qx 'MARKER_REACHED_FINAL=yes' "$RUNNER_TEMP/nexus-qemu-result/run-manifest.txt"
+          grep -Fq "$NEXUS_QEMU_EXPECT_MARKER" "$RUNNER_TEMP/nexus-qemu-result/serial.log"
+
+      - name: Stage immutable release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          iso="$(cat "$RUNNER_TEMP/iso-path")"
+          mkdir -p "$RUNNER_TEMP/release"
+          cp "$iso" "$RUNNER_TEMP/release/aros-pc-x86_64.iso"
+          cp "$(dirname "$iso")/build-manifest.txt" "$RUNNER_TEMP/release/build-manifest.txt"
+          cp "$RUNNER_TEMP/nexus-qemu-result/run-manifest.txt" "$RUNNER_TEMP/release/qemu-run-manifest.txt"
+          cd "$RUNNER_TEMP/release"
+          sha256sum aros-pc-x86_64.iso build-manifest.txt qemu-run-manifest.txt > SHA256SUMS
+          test "$(stat -c%s aros-pc-x86_64.iso)" -lt 2147483648
+          short="${GITHUB_SHA:0:12}"
+          tag="nexus-g2a-$(date -u +%Y%m%d)-$short"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Immutable release tag already exists: $tag"
+            exit 1
+          fi
+          printf '%s\n' "$tag" > "$RUNNER_TEMP/release-tag"
+          {
+            echo "Nexus x86-64 diagnostic ISO candidate"
+            echo
+            echo "Source commit: $GITHUB_SHA"
+            echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Milestone label: ${MILESTONE_INPUT:-monthly}"
+            echo "Evidence: G1 ISO build + G2a exact early-kernel serial marker in QEMU."
+            echo "NOT VERIFIED: DOS, Wanderer, interactive desktop, hardware USB boot, SMP, isolation."
+            echo "This is a pre-release, not a stable OS release."
+          } > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Publish only verified ISO as GitHub prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$(cat "$RUNNER_TEMP/release-tag")"
+          gh release create "$tag" \
+            "$RUNNER_TEMP/release/aros-pc-x86_64.iso" \
+            "$RUNNER_TEMP/release/SHA256SUMS" \
+            "$RUNNER_TEMP/release/build-manifest.txt" \
+            "$RUNNER_TEMP/release/qemu-run-manifest.txt" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$tag (G2a diagnostic)" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --prerelease
