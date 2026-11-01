@@ -93,7 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           build_log="$RUNNER_TEMP/nexus-build.log"
-          scripts/nexus/baseline/build-x86_64.sh 2>&1 | tee "$build_log"
+          bash scripts/nexus/baseline/build-x86_64.sh 2>&1 | tee "$build_log"
 
           mapfile -t isos < <(
             find "$NEXUS_WORK_ROOT/runs" \
@@ -153,7 +153,7 @@ jobs:
           set -euo pipefail
           result_dir="$RUNNER_TEMP/nexus-qemu-result"
 
-          scripts/nexus/baseline/run-qemu-x86_64.sh \
+          bash scripts/nexus/baseline/run-qemu-x86_64.sh \
             "${{ steps.build.outputs.iso }}" \
             "$result_dir"
 
