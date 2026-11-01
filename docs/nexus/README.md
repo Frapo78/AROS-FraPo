@@ -87,7 +87,9 @@ The long-term architecture targets:
 
 **Stage:** Phase 0 — architectural baseline and guardrails.
 
-Nexus is not yet an implemented execution model.
+Nexus is not yet an implemented **protected execution model**. A standalone Nexus-owned C mapping-rights validation prototype and host tests are merged into `nexus/main` (PR #34); this code is **not connected to the AROS MMU or kernel**.
+
+Verified status as of 2026-11-01: G0 and the host mapping-contract CI are green; PR #24 contains a successful pinned G1/G2a **early serial boot** result but remains unmerged; PR #35 has passing host desktop-evidence tests but **no confirmed real Wanderer interaction**. Phase 0 exit criteria are unmet; Phase 1 has not started. See [Tasks](TASKS.md) and [CI strategy](CI_STRATEGY.md).
 
 The current work is intentionally conservative:
 
