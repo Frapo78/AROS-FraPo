@@ -8,7 +8,7 @@
 
 - **Monthly candidate:** first calendar day of each month, 04:00 UTC,
   plus manual dispatch. Build the exact checked-out `nexus/main` commit.
-  GitHub scheduled workflows are best-effort and can be delayed or skipped.
+  GitHub scheduled workflows are best-effort and can be delayed or skipped. **They execute from the repository default branch only**: if that branch is not `nexus/main`, this schedule is not active. Do not modify upstream-tracking `master` to work around this. A reviewed default-branch setting or dispatcher is a separate activation prerequisite.
 - **Milestone candidate:** manual dispatch after an accepted roadmap gate
   (G1, G2a, G2b, G2c, then Phase 1 milestones). It uses the same verification.
 - **No empty promises:** a failed build, missing manifest, ISO hash mismatch,
