@@ -21,7 +21,7 @@ This is **not an official AROS roadmap** and it is not an attempt to turn AROS i
 - [Roadmap](docs/nexus/ROADMAP.md)
 - [Community and participation](docs/nexus/COMMUNITY.md)
 
-Development happens primarily on `nexus/main` and `nexus/bootstrap-x86_64`. The fork's `master` branch is intended to stay close to upstream AROS.
+Development integrates on `nexus/main` through focused feature branches. `nexus/bootstrap-x86_64` is a historical/bootstrap experiment, not the default active integration branch. The fork's `master` tracks upstream AROS only. As of 2026-11-01, Phase 0 has a merged host-only mapping-rights C prototype (PR #34), while QEMU harness and desktop evidence tooling remain under review (PRs #24 and #35); there is no protected Nexus kernel or accepted Wanderer baseline. See [current tasks](docs/nexus/TASKS.md).
 
 **Project direction:** Francesco Poltero  
 **Contact:** info@francescopoltero.com

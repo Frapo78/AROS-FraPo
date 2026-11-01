@@ -5,7 +5,7 @@ GitHub Issues are the source of truth for task-level progress. This file is the 
 ## Architecture refinement
 
 ### ADR-0002 — Convergent AROS / Nexus architecture
-Status: **formalized; three-pass review complete; integration tracked in PR #19**
+Status: **accepted architectural direction (ADR-0002); PR #19 is historical, not a pending integration gate**
 Issue: #18
 
 Core documents:
@@ -27,19 +27,19 @@ Issue: #2
 Deliverable: `docs/nexus/X86_64_BOOT_MAP.md`
 
 ### P0.2 — Reproducible QEMU baseline
-Status: **todo**
+Status: **G1 reference build evidence recorded on PR #24; current main-line baseline and full desktop gate not promoted**
 Issue: #3
 
 ### P0.3 — Privileged-operation inventory
-Status: **todo**
+Status: **partial source/privilege inventory; verification remains open**
 Issue: #4
 
 ### P0.4 — Regression/test inventory
-Status: **todo**
+Status: **partial upstream m68k/SMP inventory documented in `REGRESSION_MATRIX_P04.md`; named host and guest suites not executed for that checkpoint**
 Issue: #5
 
 ### P0.5 — Baseline diagnostics
-Status: **todo**
+Status: **early serial diagnostics observed on PR #24; full boot diagnostics not accepted**
 Issue: #6
 
 ### P0.6 — Trust, fault and legacy privilege validation
@@ -65,11 +65,11 @@ Document:
 - `ADDRESS_SPACE_MODEL.md`
 
 ### P0.9 — Nexus CI and QEMU implementation gate
-Status: **G0 repository sanity active; G1/G2 build and QEMU gates pending**
+Status: **G0 active; PR #24 has recorded G1 and G2a early-marker success on its pinned commit; G2b/G2c full Wanderer proof still open; PR #24 not merged**
 Issue: #15
 
 ### P0.10 — Evidence-driven agent engineering
-Status: **controls defined; three-pass review complete; integration tracked by #22 / PR #23**
+Status: **controls defined and present on `nexus/main`; PR #23 is historical**
 Issue: #22
 
 Core controls:
@@ -78,6 +78,14 @@ Core controls:
 - Evidence Red Team with **NO TEST, EXPLAIN WHY**;
 - H0-H3 human/hardware gates;
 - falsifiable task templates.
+
+## Phase 0 code and tooling checkpoint (2026-11-01)
+
+- **Merged:** PR #34, `cf6a26fe0ea76e5d86536bbe6052fc64ff65ca99`: Nexus-owned **standalone host C** mapping-rights validator and negative NX input tests. The host CI passed. No AROS MMU/page-table integration, kernel ABI change or isolation claim.
+- **Open:** PR #24: resource-aware G1/G2a QEMU harness; recorded successful early serial marker, not a verified Wanderer desktop.
+- **Open:** PR #35: G2c desktop evidence capture and adversarial host tests, cleanly based on main; CI passed, but no real guest Wanderer interaction proof. Replaces closed PR #30.
+- **Closed as superseded:** PRs #27/#28 (obsolete upstream candidate), #29/#33 (superseded by merged #34), #30 (superseded by #35).
+- **Evidence boundary:** E2 host-only for #34 and #35; historical E4 early-boot G2a on #24. No completed Phase 0 exit, no Phase 1 implementation, no L0-L5 protection claim.
 
 ## Phase 1 preparation
 

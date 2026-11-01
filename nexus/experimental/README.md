@@ -32,7 +32,7 @@ cc -std=c11 -Wall -Wextra -Werror -pedantic -o /tmp/nexus-mapping-test nexus/exp
 **Task contract:** Goal: reject nonboolean NX capability inputs rather than treating
 any nonzero integer as confirmed hardware NX. Non-goals: PTE manipulation, kernel
 integration, public ABI, or hardware isolation. Preconditions: existing standalone
-C11 mapping-rights contract on PR #29. U: AROS runtime untouched. N: experimental
+C11 mapping-rights contract, originally proposed in PR #29 and integrated via PR #34. U: AROS runtime untouched. N: experimental
 header and host tests. A: none; B0-B3: no boundary exists. Integrator: Frapo78.
 Acceptance: values 0 and 1 retain their behavior; -1 and 2 reject; 256 rights
 patterns times four NX inputs plus 20 high-bit probes all match the oracle.
@@ -50,7 +50,7 @@ no allocation, lifetime, shared state, ABI or error-path expansion.
 OK (failing test); after the guard, 1,044 focused cases passed locally with
 UBSan. Test: `cc -std=c11 -Wall -Wextra -Werror -pedantic -fsanitize=undefined
 -o /tmp/nexus-nx-test nexus/experimental/tests/mapping_nx_input_test.c &&
-/tmp/nexus-nx-test`. CI has not yet been observed on the branch.
+/tmp/nexus-nx-test`. The clean integration PR #34 passed its GitHub Actions host contract workflow and was squash-merged into `nexus/main` at `cf6a26fe0ea76e5d86536bbe6052fc64ff65ca99`.
 **NO TEST, EXPLAIN WHY:** These host tests cannot establish actual NX/PTE
 enforcement or TLB behavior. Strongest untested failure: CPU executes a
 supposedly non-executable page. Requires G1-bound deterministic QEMU fault

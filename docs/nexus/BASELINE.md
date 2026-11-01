@@ -18,9 +18,9 @@ The fork remains active while upstream AROS continues to change. A documented ba
 
 ## Tracking note
 
-The fork's upstream-tracking `master` has advanced to `6c1e40647f1bc58cd6986a5050563f2112c17329`.
+As checked on 2026-11-01, the upstream AROS `master` head and the fork's upstream-tracking `master` are `bf196e7dc17f879d0eeb7b86446e14160df65b5b`. This is a **tracking observation**, not a new tested implementation baseline.
 
-The reproducible implementation baseline below remains intentionally pinned to the earlier reviewed commit until G1/G2 build and boot evidence is repeated and the baseline is explicitly advanced.
+The recorded implementation baseline below remains intentionally pinned to the earlier reviewed commit. PR #24 reports a successful SHA-bound x86-64 G1 build and G2a early serial-marker QEMU run, but the PR is unmerged and **G2b/G2c full desktop/Wanderer evidence is not accepted**. The recorded baseline must not be promoted from a smoke marker or upstream tracking alone.
 
 This distinction is deliberate: **tracking head is not the same as tested baseline**.
 
