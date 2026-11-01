@@ -1,6 +1,12 @@
 name: Nexus monthly ISO candidate
 
 on:
+  push:
+    branches:
+      - nexus/main
+    paths:
+      - '.github/workflows/nexus-iso-release.yml'
+      - 'scripts/nexus/baseline/**'
   schedule:
     - cron: '0 4 1 * *'
   workflow_dispatch:
