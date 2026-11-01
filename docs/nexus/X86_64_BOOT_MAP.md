@@ -1,10 +1,10 @@
 # x86-64 Boot Map for Nexus
 
-> Status: Phase 0 discovery draft
+> Status: Phase 0 source inventory; historical topology sections reconciled with ADR-0002 on 2026-11-01
 >
 > Reference source: current AROS upstream used by the fork at the start of Nexus work.
 
-This document maps the current native x86-64 path from Multiboot entry to Wanderer and identifies the first safe seams for Nexus.
+This document maps the native x86-64 source path from Multiboot entry to Wanderer and identifies candidate Nexus seams. **The boot chain is a source inventory, not proof that the current `nexus/main` reaches Wanderer.** PR #24 demonstrated an early serial marker only. All proposed seams below follow ADR-0002: normal AROS stays the primary runtime; a full Legacy Cell is not a prerequisite.
 
 ## 1. Boot chain summary
 
@@ -162,7 +162,7 @@ Nexus should eventually take ownership of:
 - executable permissions;
 - kernel mapping lifetime.
 
-The bootstrap may create temporary mappings, but Nexus should replace them before the Legacy Cell begins execution.
+The bootstrap may create temporary mappings. Phase 1 should first make the current AROS runtime address-space root explicit without moving AROS into a Legacy Cell.
 
 ## 4. 64-bit kernel entry
 
@@ -246,11 +246,11 @@ bootstrap temporary MMU
         v
 Nexus address-space manager
         |
-        +-- Nexus kernel address space
+        +-- current AROS runtime address space (AS0)
         |
-        +-- protected payload address spaces
+        +-- later: explicit protected test address space (AS1)
         |
-        +-- later: Legacy Cell address space
+        +-- optional selective Legacy Cell only if justified
 ```
 
 The first Nexus prototype should reuse low-level x86 page-table encoding where practical while removing the assumption that one PML4 is the system's only runtime context.
@@ -276,29 +276,14 @@ That function:
 
 The first invocation of Exec init is special: when `origSysBase == NULL`, it only constructs the initial ExecBase.
 
-### Nexus seam N2
+### Nexus seam N2 — preserve Exec initialization
 
-This is the ideal Legacy Cell creation boundary.
-
-A future sequence should become conceptually:
-
-```
-kernel_cstart()
-   |
-   +-- Nexus core initialization
-   +-- Nexus root AddressSpace
-   +-- Nexus kernel mappings
-   +-- Legacy Cell AddressSpace
-   +-- map ABI v1 memory layout into Legacy Cell
-   |
-   v
-Legacy Cell entry
-   |
-   v
-krnPrepareExecBase()
-```
-
-The key goal is that Exec still sees the memory model it expects, while that memory is no longer synonymous with the Nexus kernel address space.
+This is a critical **compatibility boundary**, not a mandatory Legacy Cell
+creation point. Under ADR-0002, the initial implementation preserves
+`krnPrepareExecBase()`, its ordering and the ordinary AROS runtime memory
+layout. First make MMU-root ownership explicit beneath AROS (AS0); only later
+introduce separately tested protected contexts. Selective Legacy Cells are
+optional and require a concrete compatibility justification.
 
 ## 8. Resident initialization and privilege transition
 
@@ -322,7 +307,7 @@ RTF_SINGLETASK code must be audited because some residents currently rely on sup
 
 - Nexus core functionality;
 - driver/service-domain functionality;
-- explicit temporary Legacy Cell privilege;
+- an explicitly audited legacy privilege dependency;
 - obsolete historical assumption.
 
 ## 9. Exec becomes a scheduler
@@ -344,9 +329,7 @@ At this point classic Exec multitasking is operational.
 
 Do not rewrite this path for the MVP.
 
-A Legacy Cell initially receives one Nexus thread/vCPU. Exec schedules its own Tasks inside that execution context.
-
-SMP Legacy Cells can follow only after single-vCPU containment works.
+Exec continues scheduling normal AROS Tasks in the unchanged runtime for the first extraction. Any future protected execution or selective Legacy Cell must be separately justified and tested; neither is required for the initial AS0 seam.
 
 ## 10. DOS bootstrap
 
@@ -416,7 +399,7 @@ It then starts Wanderer directly.
 Therefore the initial Nexus compatibility success ladder is:
 
 1. long-mode entry;
-2. Nexus MMU ownership;
+2. explicit AS0 ownership seam (future, not yet implemented);
 3. initial ExecBase;
 4. Exec task switching;
 5. dosboot;
@@ -449,14 +432,10 @@ current bootstrap
       v
 Nexus initialization
       |
-      +--> Nexus protected test process A
-      +--> Nexus protected test process B
+      +--> AS0: unchanged AROS runtime
+      |         Exec/DOS/Intuition/Wanderer
       |
-      v
-Legacy Cell
-      |
-      v
-existing Exec/DOS/Intuition/Wanderer
+      +--> later AS1: minimal protected test context
 ```
 
 ## 14. Immediate technical work derived from this map
@@ -477,16 +456,16 @@ Separate:
 
 - kernel-global mappings;
 - protected-process mappings;
-- Legacy Cell mappings;
+- optional selective Legacy Cell mappings, only if introduced;
 - device/MMIO mappings.
 
 ### N4. Privilege audit
 
 Audit every RTF_SINGLETASK resident and every path that assumes ring-0 access.
 
-### N5. Protected payload before Legacy Cell
+### N5. Protected context without relocating Exec
 
-Run a minimal pair of protected contexts before attempting to relocate Exec. This proves address-space and IPC correctness independently of AROS compatibility.
+After AS0, protection and fault gates, run a minimal second protected context while normal Exec stays in place. Do not require or imply a wholesale Exec relocation into a Legacy Cell.
 
 ## 15. Key finding
 
