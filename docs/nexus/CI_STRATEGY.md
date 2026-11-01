@@ -1,6 +1,6 @@
 # Nexus CI and Validation Strategy
 
-> Status: Phase 0 design
+> Status: Phase 0 staged implementation; gates below are requirements, not all completed
 >
 > Tracking issue: #15
 
@@ -24,6 +24,17 @@ Workflow:
 `.github/workflows/nexus-project-sanity.yml`
 
 This gate is intentionally independent of the AROS toolchain.
+
+## Evidence checkpoint (2026-11-01)
+
+- **G0:** repository sanity and source-hygiene workflows are active.
+- **G1:** PR #24 records a successful bounded x86-64 build at a pinned source revision. The PR remains unmerged; this does not advance `BASELINE.md`.
+- **G2a:** PR #24 records a real QEMU early serial marker (`AROS64 - The AROS Research OS`) from a SHA-bound ISO. This is **not** proof of Exec/DOS completion, Wanderer usability or protection.
+- **G2b/G2c:** full guest desktop reachability and human-confirmed input-response interaction are **not established**. PR #35 adds host-only desktop evidence capture/verification and has passing CI, not an actual guest desktop run.
+- **G3/G4/G5:** no protection, SMP shootdown or physical-hardware gates have passed for Nexus.
+- **Nexus C prototype:** PR #34 merged with passing focused host CI. It validates a policy, not x86-64 page-table enforcement.
+
+The G1/G2a result is evidence for the exact PR #24 artifact only. Never silently transfer that evidence to current `nexus/main`, a new upstream SHA or another ISO.
 
 ## Gate G1 — reference x86-64 build
 
