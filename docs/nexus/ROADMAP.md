@@ -64,6 +64,24 @@ Exit criteria:
 - the first low-level extraction can be made without guessing about privilege, memory ownership or Exec policy;
 - no architectural document still assumes that the whole AROS runtime must live in a Legacy Cell.
 
+### Release cadence and boot-image evidence
+
+The planned release train is a **monthly x86-64 diagnostic ISO candidate**
+(04:00 UTC on day 1) plus manually triggered milestone candidates.
+Publication is fail-closed on a fresh G1 build, ISO provenance, and a
+real G2a QEMU serial-marker result. Early G2a builds are labelled
+**pre-release**, not usable Wanderer builds. See
+[release policy](RELEASE_POLICY.md).
+
+**Activation prerequisite:** GitHub scheduled workflows run from the
+repository's default branch only. The Nexus integration branch is
+`nexus/main`, while `master` is reserved for upstream. The schedule
+must **not** be considered operational until the repository default branch
+is confirmed to be `nexus/main` (or a separately reviewed dispatcher is
+installed on the default branch). Manual dispatch and first actual
+release must also be verified. Do not change `master` to carry Nexus
+code merely to enable scheduling.
+
 ## Phase 1 — Extract the first Nexus mechanisms under unchanged AROS
 
 Goal: create the first real Nexus substrate while preserving normal AROS behaviour.
