@@ -129,7 +129,7 @@ def negative_cases(original: str) -> None:
     for label, (before, after) in cases.items():
         if before not in original:
             raise AssertionError(f"test fixture missing: {label}")
-        mutant = original.replace(before, after, 1)
+        mutant = original.replace(before, after)
         if not check(mutant):
             raise AssertionError(f"validator accepted weakened policy: {label}")
 
