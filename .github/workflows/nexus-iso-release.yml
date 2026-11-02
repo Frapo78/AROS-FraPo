@@ -76,7 +76,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          scripts/nexus/baseline/build-x86_64.sh
+          bash scripts/nexus/baseline/build-x86_64.sh
           mapfile -t isos < <(find "$NEXUS_WORK_ROOT/runs" -type f -path '*/artifacts/aros-pc-x86_64.iso' -print)
           test "${#isos[@]}" -eq 1
           iso="${isos[0]}"
@@ -95,7 +95,7 @@ jobs:
           test "$(get ARTIFACT_SHA256 "$manifest")" = "$(sha256sum "$iso" | cut -d' ' -f1)"
           test "$(get ISO_SHA256 "$RUNNER_TEMP/nexus-grub/provenance.txt")" = "$(get ARTIFACT_SHA256 "$manifest")"
           test "$(get GRUB_SHA256 "$RUNNER_TEMP/nexus-grub/provenance.txt")" = "$(get GRUB_AFTER_SHA256 "$manifest")"
-          scripts/nexus/baseline/run-qemu-x86_64.sh "$iso" "$RUNNER_TEMP/nexus-qemu-result"
+          bash scripts/nexus/baseline/run-qemu-x86_64.sh "$iso" "$RUNNER_TEMP/nexus-qemu-result"
           grep -qx 'FINAL_STATUS=marker-reached' "$RUNNER_TEMP/nexus-qemu-result/run-manifest.txt"
           grep -qx 'MARKER_REACHED_FINAL=yes' "$RUNNER_TEMP/nexus-qemu-result/run-manifest.txt"
           grep -Fq "$NEXUS_QEMU_EXPECT_MARKER" "$RUNNER_TEMP/nexus-qemu-result/serial.log"
