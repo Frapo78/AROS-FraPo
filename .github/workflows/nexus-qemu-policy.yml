@@ -1,0 +1,36 @@
+name: Nexus QEMU resource policy
+
+on:
+  pull_request:
+    branches:
+      - nexus/main
+    paths:
+      - '.github/workflows/nexus-qemu.yml'
+      - '.github/workflows/nexus-qemu-policy.yml'
+      - 'scripts/nexus/baseline/verify-qemu-policy.py'
+      - 'scripts/nexus/baseline/verify-qemu-policy.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qemu-policy-negative-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Install YAML parser
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-yaml
+      - name: Reject unsafe QEMU triggers and resource mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/nexus/baseline/verify-qemu-policy.sh
+          python3 -m py_compile scripts/nexus/baseline/verify-qemu-policy.py
+          bash scripts/nexus/baseline/verify-qemu-policy.sh
