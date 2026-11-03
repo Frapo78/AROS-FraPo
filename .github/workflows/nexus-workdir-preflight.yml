@@ -1,0 +1,30 @@
+name: Nexus Linux workdir preflight
+
+on:
+  pull_request:
+    branches:
+      - nexus/main
+    paths:
+      - 'scripts/nexus/host/**'
+      - '.github/workflows/nexus-workdir-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  posix-tar-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Run syntax and adversarial filesystem checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/nexus/host/check-linux-workdir.sh
+          bash -n scripts/nexus/host/test-check-linux-workdir.sh
+          bash scripts/nexus/host/test-check-linux-workdir.sh
