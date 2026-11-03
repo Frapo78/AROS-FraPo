@@ -40,6 +40,7 @@ If you are new to the architecture, read these in order:
 22. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
 23. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
 24. [Tasks](TASKS.md) — current phase status and issue links.
+25. [Apple Silicon local build](MACOS_APPLE_SILICON_BUILD.md) — Docker named-volume filesystem preflight and diagnostic ISO procedure.
 
 ## The idea in one paragraph
 
