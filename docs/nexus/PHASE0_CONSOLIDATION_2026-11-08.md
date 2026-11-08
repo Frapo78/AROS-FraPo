@@ -77,6 +77,15 @@
   is merged with #37's Apple Silicon link. Both original PR histories
   remain visible after supersession.
 
+## Public-release activation safety
+
+The combined candidate changes the release workflow to **manual dispatch
+only**. No GitHub push or clock trigger may create a public release merely
+because the consolidation is merged. Policy negative tests must reject
+both automatic triggers and a removed manual-event guard. Monthly cadence
+remains planned and needs its own reviewed activation following a real
+successful manual release test.
+
 ## Three-pass review checklist
 
 1. **Construction:** verify unique-file union, no lost documentation links,
