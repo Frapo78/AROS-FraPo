@@ -73,14 +73,13 @@ real G2a QEMU serial-marker result. Early G2a builds are labelled
 **pre-release**, not usable Wanderer builds. See
 [release policy](RELEASE_POLICY.md).
 
-**Activation prerequisite:** GitHub scheduled workflows run from the
-repository's default branch only. The Nexus integration branch is
-`nexus/main`, while `master` is reserved for upstream. The schedule
-must **not** be considered operational until the repository default branch
-is confirmed to be `nexus/main` (or a separately reviewed dispatcher is
-installed on the default branch). Manual dispatch and first actual
-release must also be verified. Do not change `master` to carry Nexus
-code merely to enable scheduling.
+**Activation prerequisite:** The consolidated workflow is **manual-only**:
+neither a push-triggered publication nor the monthly scheduled trigger is
+enabled. The planned schedule requires a separate reviewed activation,
+a verified manual G1/G2a release and explicit approval. GitHub schedules
+run from the default branch only. Nexus integration is `nexus/main`;
+`master` remains upstream tracking. Never add Nexus code to `master`
+to enable scheduling.
 
 ## Phase 1 — Extract the first Nexus mechanisms under unchanged AROS
 
