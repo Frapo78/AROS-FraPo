@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import unittest
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
 from audit_upstream_pat import audit_sources, cache_bits, pat_index
 
@@ -75,6 +79,46 @@ class PatAuditTests(unittest.TestCase):
         for label, mapping, cpu, flags in mutants:
             with self.subTest(label=label):
                 self.assertFalse(audit_sources(mapping, cpu, flags)['passed'], label)
+
+    def test_cli_sha_and_dirty_guards(self):
+        with tempfile.TemporaryDirectory(prefix='nexus-pat-cli-') as tmp:
+            root = Path(tmp)
+            paths = {
+                'arch/x86_64-pc/kernel/mapglobal.c': MAP,
+                'arch/x86_64-pc/kernel/kernel_startup.c': CPU,
+                'compiler/include/aros/kernel.h': FLAGS,
+            }
+            for path, data in paths.items():
+                dest = root / path
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(data, encoding='utf-8')
+            subprocess.run(['git', '-C', str(root), 'init', '-q'], check=True)
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
+            subprocess.run([
+                'git', '-C', str(root), '-c', 'user.email=ci@example.invalid',
+                '-c', 'user.name=Nexus CI', 'commit', '-qm', 'fixture',
+            ], check=True)
+            sha = subprocess.check_output(
+                ['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True
+            ).strip()
+            program = str(Path(__file__).with_name('audit_upstream_pat.py'))
+
+            def invoke(expected):
+                return subprocess.run([
+                    sys.executable, program, '--source-root', str(root),
+                    '--expected-sha', expected,
+                ], capture_output=True, text=True)
+
+            self.assertEqual(invoke(sha).returncode, 0)
+            wrong = invoke('0' * 40)
+            self.assertNotEqual(wrong.returncode, 0)
+            self.assertIn('SHA mismatch', wrong.stderr)
+            (root / 'compiler/include/aros/kernel.h').write_text(
+                FLAGS + '\n/* modified but HEAD unchanged */\n', encoding='utf-8'
+            )
+            dirty = invoke(sha)
+            self.assertNotEqual(dirty.returncode, 0)
+            self.assertIn('modified tracked files', dirty.stderr)
 
     def test_ignored_comment_forgery(self):
         mutation = MAP.replace('tmp.pat = 1;', '/* tmp.pat = 1; */ tmp.pat = 0;', 1)
