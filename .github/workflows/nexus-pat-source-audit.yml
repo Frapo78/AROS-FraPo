@@ -1,0 +1,59 @@
+name: Nexus P0.8 upstream PAT source guard
+
+on:
+  pull_request:
+    branches:
+      - nexus/main
+    paths:
+      - 'scripts/nexus/pat/**'
+      - 'docs/nexus/PAT_SOURCE_GUARD.md'
+      - '.github/workflows/nexus-pat-source-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pat-host-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out Nexus candidate
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Check out exact upstream AROS reference (source only)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: aros-development-team/AROS
+          ref: 43a4bdaccad5646edc9b00802ba9ad1a47e2066e
+          path: upstream-aros
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: |
+            arch/x86_64-pc/kernel/mapglobal.c
+            arch/x86_64-pc/kernel/kernel_startup.c
+            compiler/include/aros/kernel.h
+
+      - name: Syntax and adversarial host tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/nexus/pat/audit_upstream_pat.py scripts/nexus/pat/test_audit_upstream_pat.py
+          python3 -m unittest discover -s scripts/nexus/pat -p 'test_*.py' -v
+
+      - name: Check actual source at pinned upstream SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/nexus/pat/audit_upstream_pat.py \
+            --source-root upstream-aros \
+            --expected-sha 43a4bdaccad5646edc9b00802ba9ad1a47e2066e
+
+      - name: Evidence limitations
+        if: always()
+        shell: bash
+        run: |
+          echo 'Source-backed pattern guard + focused host mutation tests only.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No guest PAT/MSR/PTE measurement; not G1/G2a/G2b/G2c or L1-L5 isolation.' >> "$GITHUB_STEP_SUMMARY"

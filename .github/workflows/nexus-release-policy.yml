@@ -1,0 +1,31 @@
+name: Nexus ISO release policy
+
+on:
+  pull_request:
+    branches:
+      - nexus/main
+    paths:
+      - '.github/workflows/nexus-iso-release.yml'
+      - '.github/workflows/nexus-release-policy.yml'
+      - 'scripts/nexus/baseline/test-release-policy.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-policy-negative-tests:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Install YAML parser
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-yaml
+      - name: Validate manual-only release workflow and reject thirteen weakened variants
+        run: python3 scripts/nexus/baseline/test-release-policy.py

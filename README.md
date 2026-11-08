@@ -342,3 +342,14 @@ This project is licensed under the APL License - see the [LICENSE](LICENSE) file
 
 AROS contains parts built upon external components - see the [ACKNOWLEDGEMENTS](ACKNOWLEDGEMENTS) file for details
 
+
+
+## Bootable ISO release candidates
+
+Nexus targets monthly and milestone-based x86-64 QEMU diagnostic ISO
+pre-releases, gated on build provenance and an actual early-kernel boot
+marker. **The consolidated workflow allows manual publication only;
+no push-triggered public ISO release or active monthly schedule is enabled.**
+Any future schedule requires its own review and activation. A verified USB disk image
+is a separate future deliverable. See
+[release policy](docs/nexus/RELEASE_POLICY.md).

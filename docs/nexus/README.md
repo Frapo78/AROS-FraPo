@@ -40,6 +40,9 @@ If you are new to the architecture, read these in order:
 22. [Governance](GOVERNANCE.md) — project direction, decision model and contact.
 23. [Branch Policy](BRANCH_POLICY.md) — required branch roles and GitHub protection rules.
 24. [Tasks](TASKS.md) — current phase status and issue links.
+25. [Apple Silicon local build](MACOS_APPLE_SILICON_BUILD.md) — Docker named-volume filesystem preflight and diagnostic ISO procedure.
+26. [P0.8 PAT source guard](PAT_SOURCE_GUARD.md) — pinned upstream PAT mapping inspection and adversarial host tests.
+27. [Phase 0 host-evidence consolidation](PHASE0_CONSOLIDATION_2026-11-08.md) — single-PR contract and blocked merge gates.
 
 ## The idea in one paragraph
 
