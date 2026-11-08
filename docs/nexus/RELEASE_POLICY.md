@@ -1,14 +1,22 @@
 # Nexus bootable image releases
 
-> Policy approved for implementation on 2026-11-01. **No new public ISO or
-> USB image is asserted to exist by this document.** This policy takes effect
-> only after its workflow and the G1/G2a build harness are merged and verified.
+> Implementation candidate consolidated on 2026-11-08. **No new public ISO or
+> USB image is asserted to exist by this document.** Publishing is **manual-only**
+> until exact-source G1/G2a and the release workflow are verified. A main-branch
+> merge cannot itself publish a release; no scheduled job is enabled.
 
 ## Cadence and promotion
 
-- **Monthly candidate:** first calendar day of each month, 04:00 UTC,
-  plus manual dispatch. Build the exact checked-out `nexus/main` commit.
-  GitHub scheduled workflows are best-effort and can be delayed or skipped. **They execute from the repository default branch only**: if that branch is not `nexus/main`, this schedule is not active. Do not modify upstream-tracking `master` to work around this. A reviewed default-branch setting or dispatcher is a separate activation prerequisite.
+- **Manual candidate (currently enabled):** explicitly requested GitHub
+  `workflow_dispatch` on `nexus/main` after the responsible integrator accepts
+  the relevant evidence. Both automatic `push` and `schedule` triggers are
+  intentionally absent: merging the workflow or advancing a branch must
+  **never silently publish a public ISO**.
+- **Monthly candidate (planned, NOT enabled):** first calendar day of each
+  month, 04:00 UTC, only after a separate reviewed activation, real end-to-end
+  release evidence and explicit approval. GitHub schedules are best-effort
+  and execute only from the repository default branch. Do not place Nexus
+  code on upstream-tracking `master` to activate this cadence.
 - **Milestone candidate:** manual dispatch after an accepted roadmap gate
   (G1, G2a, G2b, G2c, then Phase 1 milestones). It uses the same verification.
 - **No empty promises:** a failed build, missing manifest, ISO hash mismatch,
@@ -76,9 +84,10 @@ Construction review: exact source, immutable tag, manifest, hash and
 resource bounds. Integration review: no fork `master` modification and no
 baseline promotion; upstream must be rechecked for each release.
 Evidence Red Team: missing marker, forged manifest, changed ISO, existing
-tag, incomplete logs, oversized file and scheduled-job delay must not yield
-a falsely labelled successful release.
+tag, incomplete logs, oversized file, unauthorized push and automatic
+schedule events must not yield a falsely labelled successful release.
 
-**NO TEST, EXPLAIN WHY:** publishing cannot be accepted until a real scheduled
-or manually dispatched workflow builds the ISO, boots QEMU and uploads
-the exact matching artifact. Host YAML review alone is E1, not E4.
+**NO TEST, EXPLAIN WHY:** publication cannot be accepted until a manually
+dispatched workflow builds the ISO, boots QEMU and uploads the exact
+matching artifact. Host YAML review alone is E1, not E4. Activation of a
+monthly schedule needs a separately reviewed change and its own tests.
