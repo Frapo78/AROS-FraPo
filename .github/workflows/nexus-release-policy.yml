@@ -27,5 +27,5 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y python3-yaml
-      - name: Validate actual release workflow and reject nine weakened variants
+      - name: Validate manual-only release workflow and reject thirteen weakened variants
         run: python3 scripts/nexus/baseline/test-release-policy.py
