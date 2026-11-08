@@ -1,14 +1,8 @@
-name: Nexus monthly ISO candidate
+name: Nexus manually gated ISO candidate
 
+# Publishing is opt-in. Never publish on a main-branch merge or a clock trigger.
+# Monthly cadence remains a proposed policy, not an enabled scheduled job.
 on:
-  push:
-    branches:
-      - nexus/main
-    paths:
-      - '.github/workflows/nexus-iso-release.yml'
-      - 'scripts/nexus/baseline/**'
-  schedule:
-    - cron: '0 4 1 * *'
   workflow_dispatch:
     inputs:
       milestone:
@@ -25,7 +19,7 @@ concurrency:
 
 jobs:
   build-verify-publish:
-    if: github.ref == 'refs/heads/nexus/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/nexus/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
