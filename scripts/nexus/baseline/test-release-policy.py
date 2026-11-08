@@ -33,15 +33,15 @@ def check(text: str) -> list[str]:
     require(isinstance(triggers, dict), "missing on triggers", errors)
     if not isinstance(triggers, dict):
         return errors
-    require(set(triggers) == {"push", "schedule", "workflow_dispatch"},
-            "unexpected release trigger", errors)
-    push = triggers.get("push", {})
-    require(isinstance(push, dict) and push.get("branches") == ["nexus/main"],
-            "push must be restricted to nexus/main", errors)
-    schedule = triggers.get("schedule", [])
-    require(isinstance(schedule, list) and any(
-        isinstance(item, dict) and item.get("cron") == "0 4 1 * *"
-        for item in schedule), "monthly schedule missing", errors)
+    require(set(triggers) == {"workflow_dispatch"},
+            "release publishing must require explicit manual dispatch (no push/schedule)", errors)
+    dispatch = triggers.get("workflow_dispatch")
+    inputs = dispatch.get("inputs", {}) if isinstance(dispatch, dict) else {}
+    milestone = inputs.get("milestone", {}) if isinstance(inputs, dict) else {}
+    require(isinstance(milestone, dict) and
+            milestone.get("type") == "string" and
+            milestone.get("required") == "false",
+            "optional manual milestone input missing/changed", errors)
     require(document.get("permissions") == {"contents": "read"},
             "global permissions must be read-only", errors)
 
@@ -50,8 +50,9 @@ def check(text: str) -> list[str]:
     require(isinstance(job, dict), "missing release job", errors)
     if not isinstance(job, dict):
         return errors
-    require(job.get("if") == "github.ref == 'refs/heads/nexus/main'",
-            "release job must be branch-guarded", errors)
+    require(job.get("if") ==
+            "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/nexus/main'",
+            "release job must be manual-event and main-branch guarded", errors)
     require(job.get("permissions") == {"contents": "write"},
             "publishing job permission must be explicit", errors)
     steps = job.get("steps", [])
@@ -101,8 +102,20 @@ def check(text: str) -> list[str]:
     return errors
 
 
-def negative_cases(original: str) -> None:
+def negative_cases(original: str) -> int:
     cases = {
+        "automatic push release trigger": (
+            "on:\n  workflow_dispatch:",
+            "on:\n  push:\n    branches:\n      - nexus/main\n  workflow_dispatch:"),
+        "automatic scheduled release trigger": (
+            "on:\n  workflow_dispatch:",
+            "on:\n  schedule:\n    - cron: '0 4 1 * *'\n  workflow_dispatch:"),
+        "missing manual event job guard": (
+            "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/nexus/main'",
+            "github.ref == 'refs/heads/nexus/main'"),
+        "required milestone without review": (
+            "required: false",
+            "required: true"),
         "non-executable build wrapper": (
             "bash scripts/nexus/baseline/build-x86_64.sh",
             "scripts/nexus/baseline/build-x86_64.sh"),
@@ -132,6 +145,7 @@ def negative_cases(original: str) -> None:
         mutant = original.replace(before, after)
         if not check(mutant):
             raise AssertionError(f"validator accepted weakened policy: {label}")
+    return len(cases)
 
 
 def main() -> None:
@@ -139,8 +153,8 @@ def main() -> None:
     failures = check(text)
     if failures:
         raise SystemExit("Release policy FAIL:\n- " + "\n- ".join(failures))
-    negative_cases(text)
-    print("Release policy PASS: actual YAML + 9 rejected negative mutations")
+    mutation_count = negative_cases(text)
+    print(f"Release policy PASS: actual YAML + {mutation_count} rejected negative mutations")
     print("Evidence: E1 static release policy, E2 focused negative validator tests")
     print("NOT evidence of a completed ISO release or usable Wanderer desktop")
 
