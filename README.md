@@ -348,8 +348,8 @@ AROS contains parts built upon external components - see the [ACKNOWLEDGEMENTS](
 
 Nexus targets monthly and milestone-based x86-64 QEMU diagnostic ISO
 pre-releases, gated on build provenance and an actual early-kernel boot
-marker. **No published image or active monthly schedule is implied until
-its release workflow is merged, dispatched successfully and the default-
-branch scheduling prerequisite is satisfied.** A verified USB disk image
+marker. **The consolidated workflow allows manual publication only;
+no push-triggered public ISO release or active monthly schedule is enabled.**
+Any future schedule requires its own review and activation. A verified USB disk image
 is a separate future deliverable. See
 [release policy](docs/nexus/RELEASE_POLICY.md).
