@@ -115,7 +115,7 @@ If Review 3 changes a trust or architecture assumption:
 
 ## 5. Upstream synchronization
 
-Before a ARBM feature branch is merged:
+Before an ARBM feature branch is merged:
 
 1. inspect current upstream AROS;
 2. check whether the touched files changed upstream;
