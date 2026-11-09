@@ -67,3 +67,9 @@ Current-facing documentation also updated: docs/nexus/README.md, TASKS.md, GOVER
 Review 1: no source, binary, or workflow files in the PR diff; text-only changes reviewed for known renamed link targets.
 Review 2: `nexus/main` remains base; upstream observed `557dddb47786ee48fc824accaace0876a867a3c9`. Tested baseline untouched.
 Review 3: failure hypothesis: missing historical filenames, stale workflow consumers, and false-positive zero-result code search could mask remaining old references. A complete git-grep over tracked files and link-checker are required to falsify this. E0 only until executed. **NO TEST**: full repository checkout is unavailable here, and code search is demonstrably incomplete. H0.
+
+## Automated audit entry point
+
+A read-only audit script is now available at `tools/arbm_name_audit.py`. Execute it from a complete checkout with `python3 tools/arbm_name_audit.py`. It inventories tracked text files, reports case-insensitive old-name occurrences, and fails on broken relative Markdown links. Review the reported occurrences manually: historical ADR, branch, directory and provenance references are intentionally not an automatic failure. It is not a replacement for G0, CI, or workflow validation.
+
+The connected GitHub PR reports mergeable=true and base `7164c47c84d1bd468639c3fcad0e23104175f24f`, but the latest checked head `093dcaed54dcb1f065cc8aaf708d1cbff53f13a5` had zero commit statuses. A newer audit-script commit exists, so checks must be re-read on the current head. The checkout attempt in this execution environment failed DNS resolution of github.com; consequently no complete-checkout audit has been executed. **Merge remains blocked.**
