@@ -1,8 +1,8 @@
-# Nexus Trust and Fault Model
+# ARBM Trust and Fault Model
 
 > Status: architectural baseline
 >
-> This document defines what Nexus is trying to protect, from whom, and at which implementation stage.
+> This document defines what ARBM is trying to protect, from whom, and at which implementation stage.
 
 ## 1. Why this document exists
 
@@ -18,17 +18,17 @@ A system may protect one process from an accidental pointer bug while still allo
 - corrupt a shared driver;
 - halt the machine through a privileged compatibility API.
 
-Nexus therefore describes isolation as a set of independently measurable properties.
+ARBM therefore describes isolation as a set of independently measurable properties.
 
 No milestone may claim that a Legacy Cell, protected process, service domain, or the normal ABI v1 runtime is isolated without stating which properties are actually enforced.
 
 ## 2. Trusted Computing Base
 
-The long-term Nexus TCB should contain only code that must be trusted to enforce isolation.
+The long-term ARBM TCB should contain only code that must be trusted to enforce isolation.
 
 ### Trusted
 
-- Nexus core;
+- ARBM core;
 - architecture backend required for privilege transitions;
 - page-table management;
 - interrupt/trap entry;
@@ -51,7 +51,7 @@ Some components may temporarily remain trusted during migration:
 
 Every temporary trusted component must be recorded as technical debt rather than silently treated as part of the final design.
 
-### Intended to become untrusted across explicit Nexus boundaries
+### Intended to become untrusted across explicit ARBM boundaries
 
 - protected AROS applications;
 - protected service domains;
@@ -65,7 +65,7 @@ Every temporary trusted component must be recorded as technical debt rather than
 
 The ordinary ABI v1 AROS shared-memory runtime is a **Compatibility Trust Domain (CTD)** during convergence.
 
-Until real privilege separation is established for that runtime, Nexus must not pretend that a hostile ABI v1 task is fully untrusted relative to the machine.
+Until real privilege separation is established for that runtime, ARBM must not pretend that a hostile ABI v1 task is fully untrusted relative to the machine.
 
 The CTD may still contain historical authority such as:
 
@@ -74,7 +74,7 @@ The CTD may still contain historical authority such as:
 - direct interrupt control;
 - direct hardware access.
 
-As each machine mechanism is extracted beneath Nexus, that authority is reduced.
+As each machine mechanism is extracted beneath ARBM, that authority is reduced.
 
 This distinction prevents the architecture from overstating security during migration.
 
@@ -82,7 +82,7 @@ A component may be trusted in one deployment mode and untrusted in another.
 
 ## 3. Primary threat classes
 
-Nexus should eventually contain all of the following.
+ARBM should eventually contain all of the following.
 
 ### T1 — accidental user-space corruption
 
@@ -96,7 +96,7 @@ Examples:
 
 Required outcome:
 
-The responsible domain fails without arbitrary modification of Nexus or another protected domain.
+The responsible domain fails without arbitrary modification of ARBM or another protected domain.
 
 ### T2 — deliberately hostile protected application
 
@@ -120,7 +120,7 @@ This threat has two deployment states.
 
 While ABI v1 executes inside the ordinary shared Compatibility Trust Domain and still retains direct machine privilege, a hostile ABI v1 application may be able to compromise the whole CTD and potentially machine state.
 
-Nexus must **not** claim containment that has not yet been implemented.
+ARBM must **not** claim containment that has not yet been implemented.
 
 The convergence roadmap progressively removes this authority.
 
@@ -128,7 +128,7 @@ The convergence roadmap progressively removes this authority.
 
 When ABI v1 software executes inside an explicitly protected compatibility domain, it may compromise shared legacy state inside that domain but must not thereby compromise:
 
-- Nexus;
+- ARBM;
 - another protected domain;
 - an isolated driver;
 - unrelated protected applications;
@@ -157,11 +157,11 @@ Examples:
 - USB descriptors;
 - device responses.
 
-The long-term goal is to keep parsers and large protocol stacks outside the Nexus TCB.
+The long-term goal is to keep parsers and large protocol stacks outside the ARBM TCB.
 
 ## 4. Denial of service
 
-Nexus aims to prevent an explicitly protected domain from trivially freezing the whole machine through historical APIs. The normal ABI v1 Compatibility Trust Domain reaches this property only as privilege mechanisms are extracted and mediated.
+ARBM aims to prevent an explicitly protected domain from trivially freezing the whole machine through historical APIs. The normal ABI v1 Compatibility Trust Domain reaches this property only as privilege mechanisms are extracted and mediated.
 
 Examples:
 
@@ -170,9 +170,9 @@ Examples:
 - CPU-bound task;
 - service crash.
 
-This requires Nexus to retain control of physical scheduling and interrupts.
+This requires ARBM to retain control of physical scheduling and interrupts.
 
-Nexus does **not** initially promise complete defence against every resource-exhaustion attack.
+ARBM does **not** initially promise complete defence against every resource-exhaustion attack.
 
 Resource quotas for:
 
@@ -186,7 +186,7 @@ are later hardening work.
 
 ## 5. Isolation levels
 
-Nexus uses explicit isolation levels so prototypes cannot overstate their security.
+ARBM uses explicit isolation levels so prototypes cannot overstate their security.
 
 ### L0 — Compatibility-domain classification
 
@@ -200,11 +200,11 @@ For a Legacy Cell prototype, L0 may mean conceptual containment without a proven
 
 A domain has a separate hardware address space.
 
-It cannot directly read or write private Nexus mappings or another protected domain through normal CPU memory accesses.
+It cannot directly read or write private ARBM mappings or another protected domain through normal CPU memory accesses.
 
 ### L2 — Privilege isolation
 
-The domain cannot obtain real Nexus supervisor authority.
+The domain cannot obtain real ARBM supervisor authority.
 
 Historical interfaces such as:
 
@@ -226,7 +226,7 @@ The domain cannot directly control arbitrary:
 - PCI configuration;
 - physical memory mappings.
 
-Hardware access is provided through Nexus-controlled capabilities or services.
+Hardware access is provided through ARBM-controlled capabilities or services.
 
 ### L4 — DMA isolation
 
@@ -234,13 +234,13 @@ A device controlled by an untrusted driver cannot DMA outside explicitly granted
 
 Preferred mechanism:
 
-- IOMMU domain + Nexus-owned DMA MemoryObjects.
+- IOMMU domain + ARBM-owned DMA MemoryObjects.
 
 Without an IOMMU, L4 cannot be honestly claimed for a driver that can program unrestricted DMA.
 
 ### L5 — Service fault isolation
 
-Major drivers and services can fail or restart without forcing a Nexus reboot or corrupting unrelated domains.
+Major drivers and services can fail or restart without forcing a ARBM reboot or corrupting unrelated domains.
 
 ## 6. Security claims during development
 
@@ -259,16 +259,16 @@ Documentation and community announcements must use these levels rather than the 
 
 A trap or fault is classified by the domain that owned the interrupted execution context.
 
-### Nexus fault
+### ARBM fault
 
-A fault while Nexus is executing privileged core code is a kernel failure.
+A fault while ARBM is executing privileged core code is a kernel failure.
 
 Initial policy:
 
 - capture diagnostics;
 - panic/halt.
 
-Later recovery may be possible for selected subsystems, but Nexus core corruption must never be hidden.
+Later recovery may be possible for selected subsystems, but ARBM core corruption must never be hidden.
 
 ### Protected-domain fault
 
@@ -284,7 +284,7 @@ Policy:
 - record diagnostics;
 - terminate the affected process/domain;
 - release resources;
-- keep Nexus alive.
+- keep ARBM alive.
 
 ### Legacy Cell fault
 
@@ -298,18 +298,18 @@ A fatal Cell-level protection violation must:
 - revoke Cell capabilities;
 - revoke hardware/service channels;
 - free or quarantine Cell memory;
-- keep Nexus alive.
+- keep ARBM alive.
 
 ## 8. ABI v1 shared-memory limitation
 
-Nexus cannot transparently give every existing ABI v1 task a separate address space while preserving arbitrary pointer-sharing semantics.
+ARBM cannot transparently give every existing ABI v1 task a separate address space while preserving arbitrary pointer-sharing semantics.
 
 That is intentional.
 
 The convergent architecture therefore permits several modes:
 
 - normal ABI v1 inside the shared Compatibility Trust Domain;
-- protected AROS applications using explicit Nexus boundaries;
+- protected AROS applications using explicit ARBM boundaries;
 - selective Legacy Cells for risky legacy software;
 - adapted/generated service boundaries.
 
@@ -319,7 +319,7 @@ Strong isolation is added where the contract permits it rather than being falsel
 
 A platform without usable DMA remapping cannot offer the same driver threat model as one with an IOMMU.
 
-Nexus should expose this honestly.
+ARBM should expose this honestly.
 
 Possible policies:
 
