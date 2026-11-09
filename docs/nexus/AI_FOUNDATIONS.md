@@ -6,7 +6,7 @@
 
 ## 1. Principle
 
-Nexus should be ready for AI/agent workloads without making a language model part of the kernel.
+ARBM should be ready for AI/agent workloads without making a language model part of the kernel.
 
 The trusted core must remain:
 
@@ -33,7 +33,7 @@ Designing those mechanisms cleanly now avoids adding unsafe global AI privileges
 
 ## 3. AI service model
 
-A future AROS AI service may expose a conventional AROS-facing interface while using Nexus mechanisms underneath.
+A future AROS AI service may expose a conventional AROS-facing interface while using ARBM mechanisms underneath.
 
 Conceptually:
 
@@ -86,7 +86,7 @@ agent:
   no    arbitrary shell
 ```
 
-Nexus capabilities can make this enforceable at the system boundary.
+ARBM capabilities can make this enforceable at the system boundary.
 
 This is more important than whether the model is local or remote.
 
@@ -184,7 +184,7 @@ Possible providers include:
 - remote hosted API;
 - specialized embedded model.
 
-Provider selection belongs in user/service policy, not in Nexus.
+Provider selection belongs in user/service policy, not in ARBM.
 
 ## 11. Privacy and observability
 
@@ -195,7 +195,7 @@ A future AI broker should make visible:
 - which services/tools it invoked;
 - whether data leaves the machine.
 
-Nexus should provide the enforcement primitives; the AROS runtime provides user-facing policy and UX.
+ARBM should provide the enforcement primitives; the AROS runtime provides user-facing policy and UX.
 
 ## 12. Failure model
 
@@ -213,7 +213,7 @@ The OS must continue functioning normally.
 
 ## 13. Non-goals
 
-Nexus will not:
+ARBM will not:
 
 - place inference logic in the kernel;
 - require an LLM to boot or administer the machine;
@@ -231,4 +231,4 @@ The only near-term requirement is architectural hygiene:
 - service interfaces should be discoverable/versioned;
 - future compute accelerators should fit the HIDD/service model.
 
-No AI code is required in the first Nexus milestones.
+No AI code is required in the first ARBM milestones.
