@@ -2,7 +2,7 @@
 
 > Status: living roadmap
 >
-> Current architectural direction: [ADR-0002](adr/0002-convergent-aros-arbm-architecture.md)
+> Current architectural direction: [ADR-0002](adr/0002-convergent-aros-nexus-architecture.md)
 
 This roadmap is ordered by architectural dependency, not by feature visibility.
 
