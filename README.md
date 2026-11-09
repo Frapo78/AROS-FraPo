@@ -17,7 +17,7 @@ This is **not an official AROS roadmap** and it is not an attempt to turn AROS i
 - [ARBM overview](docs/nexus/README.md)
 - [Architecture](docs/nexus/ARCHITECTURE.md)
 - [Convergent Architecture](docs/nexus/CONVERGENT_ARCHITECTURE.md)
-- [ADR-0002](docs/nexus/adr/0002-convergent-aros-arbm-architecture.md)
+- [ADR-0002](docs/nexus/adr/0002-convergent-aros-nexus-architecture.md)
 - [Roadmap](docs/nexus/ROADMAP.md)
 - [Community and participation](docs/nexus/COMMUNITY.md)
 
