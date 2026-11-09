@@ -457,7 +457,7 @@ Fine tuning is expected.
 
 Larger changes are acceptable through ADRs when supported by evidence.
 
-The project should willingly remove a ARBM abstraction when:
+The project should willingly remove an ARBM abstraction when:
 
 - upstream AROS provides a better solution;
 - tests show the abstraction is unnecessary;
