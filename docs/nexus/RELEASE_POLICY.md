@@ -1,4 +1,4 @@
-# Nexus bootable image releases
+# ARBM bootable image releases
 
 > Implementation candidate consolidated on 2026-11-08. **No new public ISO or
 > USB image is asserted to exist by this document.** Publishing is **manual-only**
@@ -15,7 +15,7 @@
 - **Monthly candidate (planned, NOT enabled):** first calendar day of each
   month, 04:00 UTC, only after a separate reviewed activation, real end-to-end
   release evidence and explicit approval. GitHub schedules are best-effort
-  and execute only from the repository default branch. Do not place Nexus
+  and execute only from the repository default branch. Do not place ARBM
   code on upstream-tracking `master` to activate this cadence.
 - **Milestone candidate:** manual dispatch after an accepted roadmap gate
   (G1, G2a, G2b, G2c, then Phase 1 milestones). It uses the same verification.
