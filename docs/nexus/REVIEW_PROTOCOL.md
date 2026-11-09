@@ -1,4 +1,4 @@
-# Nexus Review Protocol
+# ARBM Review Protocol
 
 > Status: mandatory engineering process
 >
@@ -6,7 +6,7 @@
 
 ## 1. Principle
 
-Nexus is deliberately developed slowly.
+ARBM is deliberately developed slowly.
 
 The project prefers a smaller verified step over a larger speculative change.
 
@@ -61,7 +61,7 @@ A meaningful correction requires another Construction pass over the corrected ar
 
 Purpose:
 
-> Does this change remain correct inside current AROS/Nexus rather than only in isolation?
+> Does this change remain correct inside current AROS/ARBM rather than only in isolation?
 
 Check:
 
@@ -265,7 +265,7 @@ Before starting work on a subsystem and again before merge:
    - conflicts with the proposed seam;
 4. record the conclusion.
 
-Nexus must not knowingly replace current community work with a stale local design.
+ARBM must not knowingly replace current community work with a stale local design.
 
 ## 11. One logical integrator
 
@@ -329,7 +329,7 @@ The claim must cite executable/environmental evidence appropriate to the level.
 
 CPU-MMU evidence does not prove DMA isolation.
 
-Contained m68k memory does not prove a Nexus sandbox.
+Contained m68k memory does not prove a ARBM sandbox.
 
 A process boundary does not prove restartability or hardware containment.
 
