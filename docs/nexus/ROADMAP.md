@@ -195,7 +195,7 @@ Work:
 
 Exit criteria:
 
-- same conceptual AROS service works directly or across a ARBM boundary;
+- same conceptual AROS service works directly or across an ARBM boundary;
 - caller code does not need a completely separate API;
 - measured overhead is documented;
 - service failure does not require whole-system failure.
@@ -308,7 +308,7 @@ Apply the same model to current AROS RISC-V/OpenSBI work.
 
 Use this phase as an architecture-neutrality test:
 
-> if a ARBM primitive only makes sense on x86-64, revisit the generic contract.
+> if an ARBM primitive only makes sense on x86-64, revisit the generic contract.
 
 ## Phase 12 — Automation and AI service foundations
 
