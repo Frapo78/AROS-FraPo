@@ -45,3 +45,15 @@ Review 3 / Evidence Red Team: strongest failure scenario is a naive global repla
 Evidence: E0 for plan and upstream comparison; E1 only after mechanical checks are run.
 Gate: H0 for documentation; no hardware gate.
 Residual risk: incomplete reference inventory; no claim of completed migration.
+
+## Progress — active documentation batch
+
+Updated project-facing branding in README.md, VISION.md, CONVERGENT_ARCHITECTURE.md, TRUST_MODEL.md, UPSTREAM_INTEGRATION.md, BRANCH_POLICY.md, ARCHITECTURE.md, ROADMAP.md, REVIEW_PROTOCOL.md, VERIFICATION_MODEL.md, ADDRESS_SPACE_MODEL.md, AI_FOUNDATIONS.md, NEXUS_EXEC_SPLIT.md and RELEASE_POLICY.md. Existing filenames and ADR link targets were restored where an automatic replacement would have broken them.
+
+**Not complete:** this is a targeted documentation batch, not an exhaustive repository-wide inventory. CI/workflows, source symbols, case-insensitive tracked-file scanning and links still require mechanical validation. Do not infer build, boot, or CI success from these edits. Historical ADR text is unchanged. Branch and directory migration are deferred to avoid breaking external consumers.
+
+### Review updates
+
+Review 1: textual branding changes only, with known filename/link corrections; inspect full diff before merge.
+Review 2: no intentional changes to ABI, binaries, upstream tracking or baseline; no build regression evidence yet.
+Review 3: counterexample found — renaming link targets to ARBM without renaming files breaks documentation links; repaired in touched files. Remaining risk: unexamined references in other files. E0; E1 link checker not yet executed. H0.
