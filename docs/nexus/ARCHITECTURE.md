@@ -4,7 +4,7 @@
 >
 > Current direction: convergent AROS / ARBM architecture
 >
-> Governing decision: [ADR-0002](adr/0002-convergent-aros-arbm-architecture.md)
+> Governing decision: [ADR-0002](adr/0002-convergent-aros-nexus-architecture.md)
 
 ARBM is the protected executive architecture being explored inside AROS-FraPo.
 
@@ -20,7 +20,7 @@ For the detailed model, see:
 - [CONVERGENT_ARCHITECTURE.md](CONVERGENT_ARCHITECTURE.md)
 - [TRUST_MODEL.md](TRUST_MODEL.md)
 - [ADDRESS_SPACE_MODEL.md](ADDRESS_SPACE_MODEL.md)
-- [ARBM_EXEC_SPLIT.md](ARBM_EXEC_SPLIT.md)
+- [NEXUS_EXEC_SPLIT.md](NEXUS_EXEC_SPLIT.md)
 - [UPSTREAM_INTEGRATION.md](UPSTREAM_INTEGRATION.md)
 - [AI_FOUNDATIONS.md](AI_FOUNDATIONS.md)
 
@@ -160,7 +160,7 @@ AROS / Exec policy
 ARBM Executive
 ```
 
-See [ARBM_EXEC_SPLIT.md](ARBM_EXEC_SPLIT.md).
+See [NEXUS_EXEC_SPLIT.md](NEXUS_EXEC_SPLIT.md).
 
 ## 6. Exec remains the native programming culture
 
