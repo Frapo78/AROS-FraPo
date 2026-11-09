@@ -1,8 +1,8 @@
-# Nexus Vision
+# ARBM Vision
 
 ## Why I am doing this
 
-Nexus starts from a personal motivation: a deep and long-standing passion for Amiga.
+ARBM starts from a personal motivation: a deep and long-standing passion for Amiga.
 
 What made Amiga special was never only the hardware, Workbench, or nostalgia. It was the coherence of the whole system: small, responsive, understandable, message-driven and unusually direct.
 
@@ -10,7 +10,7 @@ AROS has kept much of that culture alive while doing something even harder: maki
 
 I believe that work deserves to go further.
 
-Nexus is not an attempt to replace AROS with Linux, BSD, Windows, macOS or a new unrelated hobby operating system.
+ARBM is not an attempt to replace AROS with Linux, BSD, Windows, macOS or a new unrelated hobby operating system.
 
 The goal is to help AROS become a stronger modern operating system while remaining recognizably AROS.
 
@@ -18,7 +18,7 @@ The goal is to help AROS become a stronger modern operating system while remaini
 
 > Can the strongest Amiga and AROS ideas remain first-class system concepts while the operating system gains modern protection, multicore scalability, current hardware support and room for future computing models?
 
-Nexus exists to test whether the answer can be yes.
+ARBM exists to test whether the answer can be yes.
 
 ## The refined thesis
 
@@ -30,7 +30,7 @@ That distinction remains useful as a **safety contract**, but further analysis c
 
 AROS should remain the primary runtime.
 
-Nexus should become the small privileged executive beneath it.
+ARBM should become the small privileged executive beneath it.
 
 That means:
 
@@ -44,7 +44,7 @@ This is the convergent architecture defined by ADR-0002.
 
 ## What should remain unmistakably Amiga/AROS
 
-Nexus explicitly values:
+ARBM explicitly values:
 
 - asynchronous message passing;
 - Tasks and lightweight execution;
@@ -79,9 +79,9 @@ Some historical assumptions are no longer acceptable as system-wide invariants:
 - weak fault containment;
 - security depending on every component behaving correctly.
 
-Nexus isolates those assumptions without declaring the Amiga programming model obsolete.
+ARBM isolates those assumptions without declaring the Amiga programming model obsolete.
 
-## AROS first, Nexus underneath
+## AROS first, ARBM underneath
 
 The intended relationship is:
 
@@ -91,9 +91,9 @@ applications
 AROS runtime
 Exec / DOS / Intuition / HIDD / m68kemu / ...
     |
-stable Nexus contracts
+stable ARBM contracts
     |
-Nexus Executive
+ARBM Executive
 CPU / memory / protection / IRQ / DMA / capabilities
     |
 hardware
@@ -103,11 +103,11 @@ This is deliberately not a deep stack of compatibility personalities.
 
 Most of the operating system remains AROS.
 
-Nexus concentrates only the mechanisms that need stronger ownership and protection.
+ARBM concentrates only the mechanisms that need stronger ownership and protection.
 
 ## Compatibility should improve with upstream
 
-Current upstream AROS already contains an important example of the direction Nexus should follow.
+Current upstream AROS already contains an important example of the direction ARBM should follow.
 
 `m68kemu.library` transparently executes classic m68k software using:
 
@@ -119,13 +119,13 @@ Current upstream AROS already contains an important example of the direction Nex
 - generated shadow-structure translation;
 - forwarding to native AROS libraries.
 
-Nexus should not duplicate this with a fork-specific "Rosetta".
+ARBM should not duplicate this with a fork-specific "Rosetta".
 
 It should help that upstream mechanism become faster, safer and more complete.
 
 The ideal long-term property is:
 
-> when AROS compatibility improves upstream, Nexus benefits automatically.
+> when AROS compatibility improves upstream, ARBM benefits automatically.
 
 ## Generated adaptation instead of permanent glue
 
@@ -138,7 +138,7 @@ AROS already has strong interface-generation traditions:
 - m68k thunk generation;
 - structure-layout generation.
 
-Nexus should build on those.
+ARBM should build on those.
 
 Where possible, one semantic interface description should drive:
 
@@ -147,11 +147,11 @@ Where possible, one semantic interface description should drive:
 - validated service stubs;
 - optional isolated transports.
 
-This reduces the risk that Nexus becomes a second implementation that slowly drifts away from AROS.
+This reduces the risk that ARBM becomes a second implementation that slowly drifts away from AROS.
 
 ## Modernity without cultural erasure
 
-Nexus aims to give AROS native mechanisms for:
+ARBM aims to give AROS native mechanisms for:
 
 - x86-64 SMP;
 - ARM64;
@@ -176,7 +176,7 @@ Not every function call needs IPC.
 
 Not every driver needs to be moved out of process immediately.
 
-Nexus should be:
+ARBM should be:
 
 > local where trust and performance justify it; isolated where containment materially helps.
 
@@ -186,7 +186,7 @@ Claims about security remain evidence-based through the L0-L5 isolation model.
 
 ## A future-ready system
 
-Nexus should also avoid making today's workload assumptions permanent.
+ARBM should also avoid making today's workload assumptions permanent.
 
 AI and agent systems are one example.
 
@@ -209,7 +209,7 @@ The spiritual precedent is closer to message ports and ARexx than to embedding a
 
 AROS-FraPo is an experimental fork.
 
-Nexus is not an official AROS roadmap.
+ARBM is not an official AROS roadmap.
 
 The project should remain constructive toward the AROS Development Team:
 
@@ -219,13 +219,13 @@ The project should remain constructive toward the AROS Development Team:
 - keep adapted diffs narrow;
 - contribute generally useful fixes upstream where practical;
 - avoid duplicate compatibility stacks;
-- revise Nexus when upstream provides a better solution.
+- revise ARBM when upstream provides a better solution.
 
-If Nexus becomes difficult to update from AROS, that is an architectural warning, not merely a Git problem.
+If ARBM becomes difficult to update from AROS, that is an architectural warning, not merely a Git problem.
 
 ## What success looks like
 
-A successful Nexus should eventually make all of these statements true:
+A successful ARBM should eventually make all of these statements true:
 
 - current AROS keeps evolving rather than being frozen as a guest;
 - classic Amiga software continues to become more compatible;
@@ -260,8 +260,8 @@ The project should be willing to:
 - remove an abstraction;
 - replace a mechanism;
 - adopt better upstream work;
-- reject an earlier Nexus idea.
+- reject an earlier ARBM idea.
 
 What should remain stable is the intent:
 
-> **Preserve the strongest Amiga/AROS ideas. Modernize the mechanisms that limit them. Stay close enough to upstream that AROS and Nexus can grow together.**
+> **Preserve the strongest Amiga/AROS ideas. Modernize the mechanisms that limit them. Stay close enough to upstream that AROS and ARBM can grow together.**
