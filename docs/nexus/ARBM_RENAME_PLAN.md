@@ -57,3 +57,13 @@ Updated project-facing branding in README.md, VISION.md, CONVERGENT_ARCHITECTURE
 Review 1: textual branding changes only, with known filename/link corrections; inspect full diff before merge.
 Review 2: no intentional changes to ABI, binaries, upstream tracking or baseline; no build regression evidence yet.
 Review 3: counterexample found — renaming link targets to ARBM without renaming files breaks documentation links; repaired in touched files. Remaining risk: unexamined references in other files. E0; E1 link checker not yet executed. H0.
+
+## Additional validation checkpoint
+
+Current-facing documentation also updated: docs/nexus/README.md, TASKS.md, GOVERNANCE.md. Wording corrections and stale README acceptance statements repaired. PR comparison confirms the diff is restricted to root AGENTS.md, root README.md, and files under docs/nexus/; no tracked source or CI file is changed by this PR.
+
+**Blocking gaps before merge:** the available repository code-search endpoint returned zero results even for known present terms, so it cannot serve as a complete tracked-file inventory. The runtime cannot clone GitHub from this environment. No full-tree link checker, G0 run, workflow validation, or successful required check result has been obtained. Keep PR draft. The current work is a **partial branding/documentation change**, not the user's requested full elimination of old identifiers.
+
+Review 1: no source, binary, or workflow files in the PR diff; text-only changes reviewed for known renamed link targets.
+Review 2: `nexus/main` remains base; upstream observed `557dddb47786ee48fc824accaace0876a867a3c9`. Tested baseline untouched.
+Review 3: failure hypothesis: missing historical filenames, stale workflow consumers, and false-positive zero-result code search could mask remaining old references. A complete git-grep over tracked files and link-checker are required to falsify this. E0 only until executed. **NO TEST**: full repository checkout is unavailable here, and code search is demonstrably incomplete. H0.
