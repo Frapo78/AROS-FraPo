@@ -23,7 +23,10 @@ issues = []
 occurrences = []
 for rel in paths:
     path = root / rel
-    if not path.is_file() or path.is_symlink():
+    if path.is_symlink():
+        continue
+    if not path.is_file():
+        issues.append(f"{rel}: tracked file missing from checkout")
         continue
     if rel.suffix.lower() not in {".md", ".markdown", ".txt", ".yml", ".yaml", ".json", ".py", ".sh", ".c", ".h", ".xml"} and rel.name != "AGENTS.md":
         continue
@@ -41,8 +44,15 @@ for rel in paths:
         if not target or target.startswith(("#", "/", "http:", "https:", "mailto:", "data:")):
             continue
         target = unquote(target.split("#", 1)[0].split("?", 1)[0])
-        if target and not (path.parent / target).exists():
-            issues.append(f"{rel}: broken link -> {target}")
+        if target:
+            resolved = (path.parent / target).resolve()
+            try:
+                resolved.relative_to(root.resolve())
+            except ValueError:
+                issues.append(f"{rel}: link escapes repository -> {target}")
+                continue
+            if not resolved.exists():
+                issues.append(f"{rel}: broken link -> {target}")
 print(f"Tracked files inspected: {len(paths)}")
 print(f"Old-name references requiring classification: {len(occurrences)}")
 for item in occurrences:
