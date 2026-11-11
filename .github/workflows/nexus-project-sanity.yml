@@ -124,9 +124,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/arbm_name_audit.py > /tmp/arbm-name-audit.log
-          grep -E '^(Tracked files inspected|Old-name references requiring classification|Broken relative Markdown links):' /tmp/arbm-name-audit.log
-          echo 'Historical identifiers remain permitted until explicitly migrated.'
+          python3 tools/arbm_name_audit.py | tee /tmp/arbm-name-audit.log
+          {
+            echo '## ARBM naming inventory'
+            grep -E '^(Tracked files inspected|Old-name references requiring classification|Broken relative Markdown links):' /tmp/arbm-name-audit.log || true
+            echo ''
+            echo 'Historical identifiers require manual classification; the audit does not automatically authorize a merge.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run agent-contract adversarial self-test
         shell: bash
