@@ -1,18 +1,18 @@
-# Nexus Architecture
+# ARBM Architecture
 
 > Status: architectural baseline
 >
-> Current direction: convergent AROS / Nexus architecture
+> Current direction: convergent AROS / ARBM architecture
 >
 > Governing decision: [ADR-0002](adr/0002-convergent-aros-nexus-architecture.md)
 
-Nexus is the protected executive architecture being explored inside AROS-FraPo.
+ARBM is the protected executive architecture being explored inside AROS-FraPo.
 
 Its purpose is to let AROS evolve deeply without splitting into two permanently separate operating systems.
 
 The central architectural decision is:
 
-> **AROS remains the primary runtime. Nexus becomes the small privileged executive beneath it.**
+> **AROS remains the primary runtime. ARBM becomes the small privileged executive beneath it.**
 
 For the detailed model, see:
 
@@ -26,15 +26,15 @@ For the detailed model, see:
 
 ## 1. Non-negotiable goals
 
-Nexus must aim to satisfy all of the following:
+ARBM must aim to satisfy all of the following:
 
 1. Existing AROS software remains usable and upstream AROS remains continuously integrable.
 2. Amiga/AROS compatibility is preserved as an explicit contract rather than treated as temporary baggage.
 3. New protected execution becomes possible with hardware-enforced address-space boundaries.
 4. Machine privilege, page tables, physical IRQ ownership and DMA authority can be separated from unsafe legacy assumptions.
-5. Exec remains central to the identity of the system; Nexus does not replace it with a Unix process model.
+5. Exec remains central to the identity of the system; ARBM does not replace it with a Unix process model.
 6. Modernization is incremental and measurable.
-7. The trusted Nexus core stays small and architecture-neutral.
+7. The trusted ARBM core stays small and architecture-neutral.
 8. Protection is selective: boundaries are introduced where they provide meaningful safety or restartability.
 9. No protected boundary relies on implicit cross-domain raw-pointer authority.
 10. The architecture remains revisable when implementation evidence or upstream evolution demands it.
@@ -58,7 +58,7 @@ The long-term model has three major planes.
              stable/generated contracts
                        │
 ╔══════════════════════▼═══════════════════════════╗
-║                NEXUS EXECUTIVE                   ║
+║                ARBM EXECUTIVE                   ║
 ║ CPU • Thread • AddressSpace • MemoryObject       ║
 ║ Endpoint • Capability • IRQ • Timer              ║
 ║ Device authority • DMA/IOMMU • fault ownership  ║
@@ -73,9 +73,9 @@ This is not intended to become a rigid stack of translation layers.
 
 Most AROS calls should remain direct unless crossing a protection boundary has a concrete benefit.
 
-## 3. Nexus kernel contract
+## 3. ARBM kernel contract
 
-The Nexus core should understand only low-level protection objects:
+The ARBM core should understand only low-level protection objects:
 
 - CPU;
 - Thread;
@@ -104,7 +104,7 @@ Those remain in AROS.
 
 This is the most important stability boundary.
 
-### Nexus mechanism
+### ARBM mechanism
 
 Examples:
 
@@ -126,7 +126,7 @@ Examples:
 - Intuition behaviour;
 - user-facing resource policy.
 
-Nexus should not need to follow every internal AROS representation change.
+ARBM should not need to follow every internal AROS representation change.
 
 ## 5. Current kernel.resource is an extraction seam
 
@@ -139,7 +139,7 @@ Nexus should not need to follow every internal AROS representation change.
 - SMP/IPI support;
 - diagnostics.
 
-It is not itself Nexus.
+It is not itself ARBM.
 
 Current implementations still depend on:
 
@@ -157,21 +157,21 @@ AROS / Exec policy
         |
 -------- stable mechanism boundary --------
         |
-Nexus Executive
+ARBM Executive
 ```
 
 See [NEXUS_EXEC_SPLIT.md](NEXUS_EXEC_SPLIT.md).
 
 ## 6. Exec remains the native programming culture
 
-Nexus does not create a mandatory parallel ExecNG runtime.
+ARBM does not create a mandatory parallel ExecNG runtime.
 
 Where new protected semantics are needed, prefer:
 
 - additive AROS APIs;
 - versioned interfaces;
 - optional protected variants;
-- internal Nexus adapters.
+- internal ARBM adapters.
 
 The following concepts remain valuable:
 
@@ -193,7 +193,7 @@ ABI v1 remains supported by the normal AROS runtime.
 
 The shared-pointer model may continue where compatibility requires it.
 
-That does not give shared pointers authority across protected Nexus boundaries.
+That does not give shared pointers authority across protected ARBM boundaries.
 
 ### Selective Legacy Cells
 
@@ -210,7 +210,7 @@ They are not the mandatory home of the entire normal AROS runtime.
 
 The primary path is upstream AROS `m68kemu.library`.
 
-Nexus should consume and, where useful, contribute to:
+ARBM should consume and, where useful, contribute to:
 
 - its transparent launch integration;
 - generated thunks;
@@ -249,7 +249,7 @@ Conceptually:
                 /            \
         direct call       generated proxy
                                |
-                         Nexus Endpoint
+                         ARBM Endpoint
                                |
                            service domain
 ```
@@ -267,7 +267,7 @@ An isolated path is valuable when:
 - authority should be restricted;
 - restartability matters.
 
-Nexus is not a pure microkernel and does not require IPC everywhere.
+ARBM is not a pure microkernel and does not require IPC everywhere.
 
 ## 10. Generator-first bridge strategy
 
@@ -280,7 +280,7 @@ AROS already provides:
 - m68k thunk generation;
 - shadow-layout generation.
 
-Nexus should extend those sources before inventing separate interface schemas.
+ARBM should extend those sources before inventing separate interface schemas.
 
 Potential generated artifacts include:
 
@@ -295,7 +295,7 @@ Generated code must still enforce protected-boundary rules.
 
 ## 11. Shared memory without global authority
 
-Nexus uses MemoryObjects to represent shareable pages.
+ARBM uses MemoryObjects to represent shareable pages.
 
 A mapping grants:
 
@@ -318,7 +318,7 @@ Expected uses include:
 
 ## 12. Hardware ownership
 
-Physical machine authority belongs to Nexus mechanisms.
+Physical machine authority belongs to ARBM mechanisms.
 
 This includes, progressively:
 
@@ -349,13 +349,13 @@ Interfaces containing:
 
 require explicit/generated bridge logic before crossing an isolation boundary.
 
-HIDD remains the semantic interface; Nexus transport is an implementation choice.
+HIDD remains the semantic interface; ARBM transport is an implementation choice.
 
 ## 14. DMA and IOMMU
 
 CPU page protection alone cannot contain bus-master DMA.
 
-On supported hardware, Nexus should eventually own:
+On supported hardware, ARBM should eventually own:
 
 - IOMMU configuration;
 - device DMA domains;
@@ -368,7 +368,7 @@ The active protection level must be visible in diagnostics.
 
 ## 15. Isolation levels
 
-Nexus reports the highest property actually demonstrated:
+ARBM reports the highest property actually demonstrated:
 
 - **L0** — compatibility containment;
 - **L1** — CPU memory isolation;
@@ -383,15 +383,15 @@ No milestone should claim "fully isolated" merely because one of these propertie
 
 POSIX remains a compatibility/runtime facility.
 
-Nexus does not redefine itself as a Unix kernel in order to support POSIX.
+ARBM does not redefine itself as a Unix kernel in order to support POSIX.
 
 Where protected primitives help POSIX, they may be reused.
 
 ## 17. AI and automation
 
-No LLM belongs in the Nexus trusted kernel.
+No LLM belongs in the ARBM trusted kernel.
 
-Nexus only provides general mechanisms useful to future AI/agent systems:
+ARBM only provides general mechanisms useful to future AI/agent systems:
 
 - async messaging;
 - capabilities;
@@ -406,11 +406,11 @@ See [AI_FOUNDATIONS.md](AI_FOUNDATIONS.md).
 
 ## 18. Upstream ownership model
 
-Nexus classifies areas as:
+ARBM classifies areas as:
 
 - **U — upstream-owned**;
 - **A — adapted**;
-- **N — Nexus-owned**.
+- **N — ARBM-owned**.
 
 The goal is to keep most AROS code in U, keep A diffs narrow, and concentrate divergence in N.
 
@@ -420,11 +420,11 @@ See [UPSTREAM_INTEGRATION.md](UPSTREAM_INTEGRATION.md).
 
 The first architecture target remains x86-64/QEMU.
 
-The first Nexus code is still deliberately small.
+The first ARBM code is still deliberately small.
 
 ### Proof 1 — explicit AddressSpace ownership
 
-Wrap the current runtime MMU root in an internal `NexusAddressSpace` abstraction with no intended AROS-visible behaviour change.
+Wrap the current runtime MMU root in an internal `ARBMAddressSpace` abstraction with no intended AROS-visible behaviour change.
 
 ### Proof 2 — real protection semantics
 
@@ -451,13 +451,13 @@ None of these steps requires moving the complete AROS runtime into a Legacy Cell
 
 ## 21. Evolution policy
 
-Nexus has stable principles, not frozen mechanics.
+ARBM has stable principles, not frozen mechanics.
 
 Fine tuning is expected.
 
 Larger changes are acceptable through ADRs when supported by evidence.
 
-The project should willingly remove a Nexus abstraction when:
+The project should willingly remove an ARBM abstraction when:
 
 - upstream AROS provides a better solution;
 - tests show the abstraction is unnecessary;
@@ -472,7 +472,7 @@ Until superseded by an ADR:
 - do not freeze AROS inside a fork-specific guest architecture;
 - do not create a parallel Exec ecosystem without evidence that extension is impossible;
 - do not duplicate upstream m68k compatibility by default;
-- do not expose raw Nexus pointers across protected boundaries;
+- do not expose raw ARBM pointers across protected boundaries;
 - do not make POSIX the native kernel identity;
 - do not require IPC everywhere;
 - do not put AI/LLM inference into the kernel TCB;

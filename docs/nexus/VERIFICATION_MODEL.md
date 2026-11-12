@@ -1,4 +1,4 @@
-# Nexus Verification Model
+# ARBM Verification Model
 
 > Status: mandatory engineering policy
 >
@@ -6,7 +6,7 @@
 
 ## 1. Why this exists
 
-AI-assisted engineering changes the economics of Nexus.
+AI-assisted engineering changes the economics of ARBM.
 
 Generating:
 
@@ -30,7 +30,7 @@ In low-level operating-system work, plausible code can still be wrong because of
 - incomplete fault paths;
 - misleading test harnesses.
 
-Therefore Nexus treats **verification capacity** as the limiting resource.
+Therefore ARBM treats **verification capacity** as the limiting resource.
 
 ## 2. Core rule
 
@@ -383,7 +383,7 @@ A security claim should cite:
 
 "L1 passed" means only the tested L1 invariant passed in the stated environment.
 
-It is not a synonym for "Nexus is secure".
+It is not a synonym for "ARBM is secure".
 
 ## 15. Upstream contribution and AI assistance
 
@@ -391,7 +391,7 @@ At the time this policy was written, current upstream AROS `CONTRIBUTING.md` con
 
 That absence is not a permanent policy guarantee.
 
-Before submitting significant Nexus-originated work upstream:
+Before submitting significant ARBM-originated work upstream:
 
 1. re-read current CONTRIBUTING/policies;
 2. discuss the change with the AROS core team when required;

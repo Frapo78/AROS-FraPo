@@ -1,10 +1,10 @@
-# Nexus Governance
+# ARBM Governance
 
 > Status: initial project governance
 
 ## Project direction
 
-**Nexus is directed by Francesco Poltero.**
+**ARBM is directed by Francesco Poltero.**
 
 Project contact:
 
@@ -12,13 +12,13 @@ Project contact:
 
 The project is an experimental architecture workstream inside the AROS-FraPo fork and is developed independently from the official AROS Development Team.
 
-Nexus is intended to remain respectful of, technically compatible with and continuously informed by upstream AROS work.
+ARBM is intended to remain respectful of, technically compatible with and continuously informed by upstream AROS work.
 
 ## Role of the project director
 
 The project director is responsible for:
 
-- maintaining the long-term Nexus vision;
+- maintaining the long-term ARBM vision;
 - protecting the architectural invariants documented in this repository;
 - deciding when an experiment is mature enough to advance;
 - stopping work when evidence is insufficient;
@@ -29,7 +29,7 @@ The project director is responsible for:
 
 Direction does not mean that architectural decisions are exempt from technical challenge.
 
-Nexus explicitly welcomes strong technical criticism and red-team review.
+ARBM explicitly welcomes strong technical criticism and red-team review.
 
 ## Decision model
 
@@ -84,9 +84,9 @@ The project should:
 - keep the fork's `master` branch close to upstream;
 - integrate relevant upstream fixes before creating competing local solutions;
 - avoid unnecessary source divergence;
-- consider upstreaming generally useful fixes that are independent of Nexus.
+- consider upstreaming generally useful fixes that are independent of ARBM.
 
-Nexus-specific architecture remains experimental unless adopted by upstream through its own community process.
+ARBM-specific architecture remains experimental unless adopted by upstream through its own community process.
 
 ## Community participation
 
@@ -96,7 +96,7 @@ Concrete, testable work belongs in GitHub Issues and pull requests.
 
 Contributors are encouraged to challenge assumptions rather than simply implement the current documents.
 
-A well-supported argument that causes Nexus to reject an idea is a useful contribution.
+A well-supported argument that causes ARBM to reject an idea is a useful contribution.
 
 ## Hardware validation authority
 

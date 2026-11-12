@@ -1,4 +1,4 @@
-# Nexus / Exec Split
+# ARBM / Exec Split
 
 > Status: architectural classification baseline
 >
@@ -8,7 +8,7 @@
 
 This document prevents two opposite mistakes:
 
-1. treating current `kernel.resource` as if it were already Nexus;
+1. treating current `kernel.resource` as if it were already ARBM;
 2. creating a completely separate ExecNG/kernel stack and duplicating AROS.
 
 The target is a narrow mechanism/policy split inside the evolving AROS system.
@@ -38,7 +38,7 @@ The same code also still depends on AROS/Exec concepts such as:
 - scheduler policy;
 - legacy privilege semantics.
 
-Nexus must therefore be extracted *through* this area, not equated with it.
+ARBM must therefore be extracted *through* this area, not equated with it.
 
 ## 3. Target relationship
 
@@ -52,12 +52,12 @@ Exec / DOS / AROS runtime
        |
        | AROS policy + compatibility
        v
-thin Nexus adapters
+thin ARBM adapters
        |
 ------- stable mechanism boundary -------
        |
        v
-Nexus Executive
+ARBM Executive
 CPU / Thread / AddressSpace
 MemoryObject / Capability
 Endpoint / IRQ / Timer
@@ -85,9 +85,9 @@ Exec continues to define:
 - `Forbid()/Permit()`;
 - ABI-visible scheduling semantics.
 
-### Nexus owns machine scheduling mechanisms
+### ARBM owns machine scheduling mechanisms
 
-Nexus eventually owns:
+ARBM eventually owns:
 
 - physical CPUs;
 - protected execution contexts;
@@ -96,7 +96,7 @@ Nexus eventually owns:
 - cross-domain scheduling authority;
 - CPU affinity/migration mechanisms required by protected contexts.
 
-Nexus should not need to walk Exec lists to understand its own protection objects.
+ARBM should not need to walk Exec lists to understand its own protection objects.
 
 The integration may initially preserve existing Exec scheduling code while extracting the lower-level CPU/context-switch machinery beneath it.
 
@@ -107,22 +107,22 @@ The table classifies semantics, not final symbol names.
 | Current API family | Convergent target | Notes |
 | --- | --- | --- |
 | `KrnDispatch/KrnSwitch/KrnSchedule` | A-class adapter | Exec policy remains AROS-owned; low-level context/CPU mechanism may be extracted |
-| `KrnSetScheduler/KrnGetScheduler` | AROS policy | Do not turn legacy scheduler policy into Nexus global policy |
-| `KrnScheduleCPU` | Split | physical IPI/reschedule mechanism may be Nexus-owned; Exec intent remains AROS policy |
-| `KrnCause` | AROS event semantics | may later use Nexus event delivery underneath |
+| `KrnSetScheduler/KrnGetScheduler` | AROS policy | Do not turn legacy scheduler policy into ARBM global policy |
+| `KrnScheduleCPU` | Split | physical IPI/reschedule mechanism may be ARBM-owned; Exec intent remains AROS policy |
+| `KrnCause` | AROS event semantics | may later use ARBM event delivery underneath |
 | `KrnCli/KrnSti` | A-class privilege seam | direct physical IF control cannot cross into protected contexts |
 | `KrnIsSuper` | A-class privilege seam | protected execution needs explicit privilege ownership |
-| IRQ add/remove/modify/allocate | Split toward Nexus authority | AROS-facing semantics may remain while physical routing becomes Nexus-owned |
-| `KrnGetBootInfo` | Read-only AROS view | keep mutable Nexus internals private |
+| IRQ add/remove/modify/allocate | Split toward ARBM authority | AROS-facing semantics may remain while physical routing becomes ARBM-owned |
+| `KrnGetBootInfo` | Read-only AROS view | keep mutable ARBM internals private |
 | `KrnMapGlobal/KrnUnmapGlobal` | A-class MMU seam | converge toward explicit AddressSpace target internally |
-| `KrnSetProtection` | Nexus mechanism behind adapter | real R/W/X enforcement belongs below AROS policy |
+| `KrnSetProtection` | ARBM mechanism behind adapter | real R/W/X enforcement belongs below AROS policy |
 | `KrnVirtualToPhysical` | Restricted compatibility API | raw physical addresses must not become general authority |
 | `KrnAllocPages/KrnFreePages` | Split | distinguish physical-page authority from AROS allocation policy |
 | `KrnCreateContext/KrnDeleteContext` | A-class seam | separate CPU execution context from `struct Task` semantics |
-| CPU topology queries | Shared read-only service | physical topology comes from Nexus mechanism; AROS decides exposure/policy |
+| CPU topology queries | Shared read-only service | physical topology comes from ARBM mechanism; AROS decides exposure/policy |
 | spinlock APIs | Shared implementation utility | not a security boundary |
 | clock-source registration | Split | physical timer mechanism versus AROS timer policy |
-| `KrnExitInterrupt` | architecture/Nexus internal | should not become ordinary application authority |
+| `KrnExitInterrupt` | architecture/ARBM internal | should not become ordinary application authority |
 | diagnostics/backtrace | Shared diagnostic facility | must validate cross-domain access when protection exists |
 
 ## 6. APIs that should not become permanent protected contracts unchanged
@@ -149,7 +149,7 @@ Protected APIs should prefer:
 
 Current context creation is tied closely to Exec Task execution.
 
-A Nexus Thread/context mechanism must be explainable without `struct Task`.
+A ARBM Thread/context mechanism must be explainable without `struct Task`.
 
 ### KrnCli/KrnSti
 
@@ -157,55 +157,55 @@ These may remain useful internally for trusted AROS/kernel code during convergen
 
 They must not become unrestricted physical interrupt controls for future protected applications or isolated services.
 
-## 7. Nexus object vocabulary
+## 7. ARBM object vocabulary
 
 The low-level object set remains deliberately small.
 
-### NexusCPU
+### ARBMCPU
 
 Physical logical CPU.
 
-### NexusThread
+### ARBMThread
 
 Protected/machine-level execution context independent of Exec Task policy.
 
-An Exec Task may initially be backed by existing machinery and later by a NexusThread adapter where useful.
+An Exec Task may initially be backed by existing machinery and later by a ARBMThread adapter where useful.
 
-### NexusAddressSpace
+### ARBMAddressSpace
 
 Hardware translation/protection context.
 
-### NexusMemoryObject
+### ARBMMemoryObject
 
 Shareable physical/logical memory object independent of one virtual address.
 
-### NexusEndpoint
+### ARBMEndpoint
 
 Protected asynchronous communication endpoint.
 
-### NexusCapability
+### ARBMCapability
 
-Explicit authority to operate on a Nexus object.
+Explicit authority to operate on a ARBM object.
 
-### NexusIRQ
+### ARBMIRQ
 
 Physical/virtual interrupt authority.
 
-### NexusTimer
+### ARBMTimer
 
 Machine timer object.
 
-### NexusDevice
+### ARBMDevice
 
 Authority over a device or hardware resource.
 
-### NexusDMA
+### ARBMDMA
 
 Controlled device-memory mapping.
 
 ## 8. No mandatory Legacy kernel layer
 
-Earlier Nexus drafts treated a "Legacy kernel compatibility layer" as a permanent layer beneath all of Exec.
+Earlier ARBM drafts treated a "Legacy kernel compatibility layer" as a permanent layer beneath all of Exec.
 
 ADR-0002 changes that.
 
@@ -216,7 +216,7 @@ Exec / AROS code
       |
 small local adapter where needed
       |
-Nexus mechanism
+ARBM mechanism
 ```
 
 Only code that actually crosses a protection boundary needs a strong translation boundary.
@@ -247,7 +247,7 @@ It is now a selective deployment mode rather than the architecture of normal ARO
 
 When touching current low-level code, classify each dependency.
 
-### Nexus mechanism
+### ARBM mechanism
 
 Keep/extract it below the stable boundary if it can be explained without AROS policy objects.
 
@@ -272,9 +272,9 @@ The adapter is successful when it is smaller and more stable than duplicating th
 
 This document focuses mainly on A-class areas.
 
-- **U**: upstream-owned, little/no Nexus-specific change.
+- **U**: upstream-owned, little/no ARBM-specific change.
 - **A**: adapted through narrow mechanism/policy seams.
-- **N**: Nexus-owned substrate.
+- **N**: ARBM-owned substrate.
 
 `kernel.resource` and selected Exec internals are expected to be A-class during early convergence.
 
@@ -282,11 +282,11 @@ See `UPSTREAM_INTEGRATION.md`.
 
 ## 12. First implementation consequence
 
-The first Nexus code still should not begin by replacing Exec scheduling.
+The first ARBM code still should not begin by replacing Exec scheduling.
 
 The smallest safe path remains:
 
-1. explicit `NexusAddressSpace` representation around the current runtime MMU root;
+1. explicit `ARBMAddressSpace` representation around the current runtime MMU root;
 2. explicit internal target for map/protect operations;
 3. real protection semantics;
 4. domain-aware fault classification;
@@ -297,9 +297,9 @@ The normal AROS runtime stays where it is.
 
 No full Legacy Cell migration is required.
 
-## 13. Definition of a clean Nexus mechanism
+## 13. Definition of a clean ARBM mechanism
 
-A Nexus mechanism should be explainable without requiring the public contract to contain:
+A ARBM mechanism should be explainable without requiring the public contract to contain:
 
 - `struct Task`;
 - `ExecBase`;
@@ -317,6 +317,6 @@ The mechanism beneath it should not.
 
 This split is intentionally revisable.
 
-If upstream AROS later introduces a cleaner abstraction, Nexus should use it and remove local glue.
+If upstream AROS later introduces a cleaner abstraction, ARBM should use it and remove local glue.
 
 If extraction creates more complexity than it removes, the boundary should be reconsidered through a new ADR rather than defended for historical reasons.

@@ -1,4 +1,4 @@
-name: Nexus project sanity
+name: ARBM project sanity
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
       - 'AGENTS.md'
       - 'scripts/nexus/**'
       - 'README.md'
+      - 'tools/arbm_name_audit.py'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/pull_request_template.md'
@@ -21,6 +22,7 @@ on:
       - 'AGENTS.md'
       - 'scripts/nexus/**'
       - 'README.md'
+      - 'tools/arbm_name_audit.py'
       - 'CONTRIBUTING.md'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/pull_request_template.md'
@@ -36,7 +38,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: Verify required Nexus documents
+      - name: Verify required ARBM documents
         shell: bash
         run: |
           set -euo pipefail
@@ -69,12 +71,12 @@ jobs:
           )
           for file in "${required[@]}"; do
             test -f "$file" || {
-              echo "::error::Missing required Nexus document: $file"
+              echo "::error::Missing required ARBM document: $file"
               exit 1
             }
           done
 
-      - name: Check local Markdown links in Nexus docs
+      - name: Check local Markdown links in ARBM docs
         shell: python
         run: |
           from pathlib import Path
@@ -116,7 +118,19 @@ jobs:
                   print(f"::error file={source}::{target}: {reason}")
               sys.exit(1)
 
-          print("Nexus local Markdown links are valid.")
+          print("ARBM local Markdown links are valid.")
+
+      - name: Audit ARBM naming and tracked Markdown links
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/arbm_name_audit.py | tee /tmp/arbm-name-audit.log
+          {
+            echo '## ARBM naming inventory'
+            grep -E '^(Tracked files inspected|Old-name references requiring classification|Broken relative Markdown links):' /tmp/arbm-name-audit.log || true
+            echo ''
+            echo 'Historical identifiers require manual classification; the audit does not automatically authorize a merge.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run agent-contract adversarial self-test
         shell: bash
@@ -125,7 +139,7 @@ jobs:
           bash -n scripts/nexus/verify-agent-contract.sh
           scripts/nexus/verify-agent-contract.sh --selftest
 
-      - name: Check Nexus process references
+      - name: Check ARBM process references
         shell: bash
         run: |
           set -euo pipefail

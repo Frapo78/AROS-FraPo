@@ -1,10 +1,10 @@
-# Nexus Tasks
+# ARBM Tasks
 
 GitHub Issues are the source of truth for task-level progress. This file is the high-level phase index.
 
 ## Architecture refinement
 
-### ADR-0002 — Convergent AROS / Nexus architecture
+### ADR-0002 — Convergent AROS / ARBM architecture
 Status: **accepted architectural direction (ADR-0002); PR #19 is historical, not a pending integration gate**
 Issue: #18
 
@@ -64,7 +64,7 @@ Issue: #14
 Document:
 - `ADDRESS_SPACE_MODEL.md`
 
-### P0.9 — Nexus CI and QEMU implementation gate
+### P0.9 — ARBM CI and QEMU implementation gate
 Status: **G0 active; PR #24 has recorded G1 and G2a early-marker success on its pinned commit; G2b/G2c full Wanderer proof still open; PR #24 not merged**
 Issue: #15
 
@@ -81,7 +81,7 @@ Core controls:
 
 ## Phase 0 code and tooling checkpoint (2026-11-01)
 
-- **Merged:** PR #34, `cf6a26fe0ea76e5d86536bbe6052fc64ff65ca99`: Nexus-owned **standalone host C** mapping-rights validator and negative NX input tests. The host CI passed. No AROS MMU/page-table integration, kernel ABI change or isolation claim.
+- **Merged:** PR #34, `cf6a26fe0ea76e5d86536bbe6052fc64ff65ca99`: ARBM-owned **standalone host C** mapping-rights validator and negative NX input tests. The host CI passed. No AROS MMU/page-table integration, kernel ABI change or isolation claim.
 - **Open:** PR #24: resource-aware G1/G2a QEMU harness; recorded successful early serial marker, not a verified Wanderer desktop.
 - **Open:** PR #35: G2c desktop evidence capture and adversarial host tests, cleanly based on main; CI passed, but no real guest Wanderer interaction proof. Replaces closed PR #30.
 - **Closed as superseded:** PRs #27/#28 (obsolete upstream candidate), #29/#33 (superseded by merged #34), #30 (superseded by #35).
@@ -89,7 +89,7 @@ Core controls:
 
 ## Phase 1 preparation
 
-### P1.1 — Internal NexusAddressSpace abstraction
+### P1.1 — Internal ARBMAddressSpace abstraction
 Status: **blocked by Phase 0 gates**
 Issue: #7
 

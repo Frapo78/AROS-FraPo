@@ -1,13 +1,17 @@
 # AGENTS.md
 
-> Operational contract for AI-assisted Nexus work.
+> Operational contract for AI-assisted ARBM (AROS Bare Metal) work.
+>
+> Naming transition: ARBM is the current project name. Historical Nexus identifiers,
+> ADR records, `nexus/main`, and `docs/nexus/` remain valid until a separately
+> validated migration explicitly replaces them. Do not bulk-rename upstream files.
 > Detailed rationale lives under `docs/nexus/`.
 
 ## Current direction
 
 ADR-0002 is current.
 
-> AROS remains the primary runtime. Nexus becomes the small privileged executive beneath it.
+> AROS remains the primary runtime. ARBM becomes the small privileged executive beneath it.
 
 Without a superseding ADR, do not create:
 - a parallel OS;
@@ -31,7 +35,7 @@ Before touching a subsystem:
 
 Repeat before merge.
 
-Fork `master` tracks upstream only. Never put Nexus implementation on `master`.
+Fork `master` tracks upstream only. Never put ARBM implementation on `master`.
 
 ## Tracking head != tested baseline
 
@@ -44,8 +48,8 @@ Do not move `BASELINE.md` just because upstream moved.
 
 Classify each significant area:
 - **U** — upstream-owned;
-- **A** — adapted through the smallest Nexus seam;
-- **N** — Nexus-owned.
+- **A** — adapted through the smallest ARBM seam;
+- **N** — ARBM-owned.
 
 Too much A-class code is a warning. For A-class work record why the seam exists and how it could later disappear.
 
@@ -54,11 +58,11 @@ Too much A-class code is a warning. For A-class work record why the seam exists 
 For machine authority record:
 1. legacy-owned;
 2. shared/adapted;
-3. Nexus-owned for the protected mode.
+3. ARBM-owned for the protected mode.
 
 Applies to CR3/page tables, privilege, IDT/APIC/interrupts, physical memory, PCI/MMIO, DMA/IOMMU and device ownership.
 
-Do not reintroduce a legacy bypass after protected ownership reaches Nexus.
+Do not reintroduce a legacy bypass after protected ownership reaches ARBM.
 
 ## Bridgeability
 
@@ -159,7 +163,7 @@ No L1-L5 claim is accepted on AI review alone.
 Never infer:
 - different address space => hardware isolation;
 - MMU isolation => DMA isolation;
-- m68k contained memory => Nexus sandbox;
+- m68k contained memory => ARBM sandbox;
 - process boundary => restartability.
 
 ## Hardware stop
@@ -180,7 +184,7 @@ Do not build a competing fork-only translator without strong evidence and a dedi
 
 ## AI scope
 
-AI/LLM is a future optional service consumer, not part of the Nexus kernel TCB.
+AI/LLM is a future optional service consumer, not part of the ARBM kernel TCB.
 
 Do not block Phase 0-5 on AI. General foundations may include async messaging, capabilities, MemoryObjects, service discovery, structured automation and future compute abstraction.
 
@@ -200,7 +204,7 @@ Squash corrective commits when they add no historical value.
 
 Current upstream AROS `CONTRIBUTING.md` has no explicit blanket AI ban. Do not assume that remains true.
 
-Before significant Nexus-originated upstream work:
+Before significant ARBM-originated upstream work:
 - re-read current policy;
 - discuss changes with the AROS team when requested;
 - ask what AI-assistance disclosure they expect;

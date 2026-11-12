@@ -1,32 +1,32 @@
-# AROS-FraPo / Nexus experimental fork
+# AROS-FraPo / ARBM (AROS Bare Metal) experimental fork
 
-> This fork is exploring **Nexus**, an experimental architecture for evolving AROS while preserving its Amiga identity.
+> This fork is exploring **ARBM**, an experimental architecture for evolving AROS while preserving its Amiga identity.
 
-Nexus is motivated by a deep passion for Amiga and by the belief that the ideas behind Exec, message ports, libraries/devices/resources, Intuition and the lightweight Amiga programming model still deserve a future on modern hardware.
+ARBM is motivated by a deep passion for Amiga and by the belief that the ideas behind Exec, message ports, libraries/devices/resources, Intuition and the lightweight Amiga programming model still deserve a future on modern hardware.
 
-The project asks whether AROS can preserve that character while progressively extracting a small modern Nexus executive beneath the existing runtime: stronger memory isolation, SMP scalability, selective service/driver containment, modern DMA/IOMMU handling and a coherent path across x86-64, ARM64 and RISC-V.
+The project asks whether AROS can preserve that character while progressively extracting a small modern ARBM executive beneath the existing runtime: stronger memory isolation, SMP scalability, selective service/driver containment, modern DMA/IOMMU handling and a coherent path across x86-64, ARM64 and RISC-V.
 
 This is **not an official AROS roadmap** and it is not an attempt to turn AROS into a Unix-like operating system. It is an experimental fork intended to test a deep architectural direction in working code while remaining respectful of and synchronisable with upstream AROS.
 
 **For implementation/review work, read first:**
-- [AGENTS.md](AGENTS.md) — concise operational contract for AI-assisted Nexus engineering
+- [AGENTS.md](AGENTS.md) — concise operational contract for AI-assisted ARBM engineering
 - [Verification Model](docs/nexus/VERIFICATION_MODEL.md)
 
 **Architecture:**
-- [Nexus Vision](docs/nexus/VISION.md)
-- [Nexus overview](docs/nexus/README.md)
+- [ARBM Vision](docs/nexus/VISION.md)
+- [ARBM overview](docs/nexus/README.md)
 - [Architecture](docs/nexus/ARCHITECTURE.md)
 - [Convergent Architecture](docs/nexus/CONVERGENT_ARCHITECTURE.md)
 - [ADR-0002](docs/nexus/adr/0002-convergent-aros-nexus-architecture.md)
 - [Roadmap](docs/nexus/ROADMAP.md)
 - [Community and participation](docs/nexus/COMMUNITY.md)
 
-Development integrates on `nexus/main` through focused feature branches. `nexus/bootstrap-x86_64` is a historical/bootstrap experiment, not the default active integration branch. The fork's `master` tracks upstream AROS only. As of 2026-11-01, Phase 0 has a merged host-only mapping-rights C prototype (PR #34), while QEMU harness and desktop evidence tooling remain under review (PRs #24 and #35); there is no protected Nexus kernel or accepted Wanderer baseline. See [current tasks](docs/nexus/TASKS.md).
+Development integrates on `nexus/main` through focused feature branches. `nexus/bootstrap-x86_64` is a historical/bootstrap experiment, not the default active integration branch. The fork's `master` tracks upstream AROS only. Phase 0 has a host-only mapping-rights C prototype (PR #34). Current boot, CI and Wanderer acceptance status must be read from the evidence ledger and current GitHub checks; the naming transition does not change their status. See [current tasks](docs/nexus/TASKS.md).
 
 **Project direction:** Francesco Poltero  
 **Contact:** info@francescopoltero.com
 
-See [Nexus Governance](docs/nexus/GOVERNANCE.md), the [Verification Model](docs/nexus/VERIFICATION_MODEL.md) and the [mandatory review protocol](docs/nexus/REVIEW_PROTOCOL.md).
+See [ARBM Governance](docs/nexus/GOVERNANCE.md), the [Verification Model](docs/nexus/VERIFICATION_MODEL.md) and the [mandatory review protocol](docs/nexus/REVIEW_PROTOCOL.md).
 
 ---
 
@@ -346,7 +346,7 @@ AROS contains parts built upon external components - see the [ACKNOWLEDGEMENTS](
 
 ## Bootable ISO release candidates
 
-Nexus targets monthly and milestone-based x86-64 QEMU diagnostic ISO
+ARBM targets monthly and milestone-based x86-64 QEMU diagnostic ISO
 pre-releases, gated on build provenance and an actual early-kernel boot
 marker. **The consolidated workflow allows manual publication only;
 no push-triggered public ISO release or active monthly schedule is enabled.**

@@ -1,8 +1,8 @@
-# Nexus Branch Policy
+# ARBM Branch Policy
 
 > Status: required repository policy
 >
-> This document describes the branch protections Nexus expects. Some protections must be enabled in GitHub repository settings and cannot be enforced by source files alone.
+> This document describes the branch protections ARBM expects. Some protections must be enabled in GitHub repository settings and cannot be enforced by source files alone.
 
 ## 1. Branch roles
 
@@ -11,23 +11,23 @@
 Purpose:
 
 - track `aros-development-team/AROS:master`;
-- contain no Nexus-specific implementation;
+- contain no ARBM-specific implementation;
 - advance by reviewed fast-forward from upstream whenever possible.
 
 Rules:
 
 - never force-push;
-- never add Nexus-specific commits;
+- never add ARBM-specific commits;
 - never rewrite upstream history;
-- inspect upstream changes before advancing the recorded Nexus baseline.
+- inspect upstream changes before advancing the recorded ARBM baseline.
 
 ### `nexus/main`
 
 Purpose:
 
-- stable Nexus integration branch;
+- stable ARBM integration branch;
 - default public branch;
-- contains only reviewed Nexus work plus reviewed upstream synchronization.
+- contains only reviewed ARBM work plus reviewed upstream synchronization.
 
 Rules:
 
@@ -69,7 +69,7 @@ Configure a GitHub branch rule or ruleset for `nexus/main` with at least:
 
 Required checks should include, once GitHub exposes stable check names:
 
-- `Nexus project sanity`;
+- `ARBM project sanity`;
 - inherited source line-ending validation;
 - inherited Windows filename validation.
 
@@ -77,7 +77,7 @@ When the x86-64 build/QEMU gates exist, add them before allowing low-level imple
 
 ## 3. Review count versus review passes
 
-GitHub's "required approving reviews" is not a substitute for the Nexus three-pass protocol.
+GitHub's "required approving reviews" is not a substitute for the ARBM three-pass protocol.
 
 The three required passes are different analyses:
 
@@ -115,7 +115,7 @@ If Review 3 changes a trust or architecture assumption:
 
 ## 5. Upstream synchronization
 
-Before a Nexus feature branch is merged:
+Before an ARBM feature branch is merged:
 
 1. inspect current upstream AROS;
 2. check whether the touched files changed upstream;

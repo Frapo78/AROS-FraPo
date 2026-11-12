@@ -1,4 +1,4 @@
-# Nexus Address-Space Model
+# ARBM Address-Space Model
 
 > Status: implementation design baseline
 >
@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-`NexusAddressSpace` is the first Nexus primitive because address-space ownership is the minimum mechanism required to make the protection boundary real.
+`ARBMAddressSpace` is the first ARBM primitive because address-space ownership is the minimum mechanism required to make the protection boundary real.
 
 The first implementation must not redesign Exec.
 
@@ -16,7 +16,7 @@ Its job is to move AROS from:
 
 toward:
 
-> explicit address-space objects owned and activated by Nexus.
+> explicit address-space objects owned and activated by ARBM.
 
 ## 2. Current x86-64 AROS state
 
@@ -40,30 +40,30 @@ These mechanisms are reusable implementation material, not yet a protected multi
 
 ## 3. First invariant
 
-After Nexus address-space ownership is established:
+After ARBM address-space ownership is established:
 
-> No code outside the Nexus architecture backend may write CR3 directly as part of ordinary runtime address-space switching.
+> No code outside the ARBM architecture backend may write CR3 directly as part of ordinary runtime address-space switching.
 
 Legacy compatibility code requests an operation.
 
-Nexus decides which hardware translation context becomes active.
+ARBM decides which hardware translation context becomes active.
 
 ## 4. Object model
 
 The architecture-neutral object is conceptually:
 
 ```c
-struct NexusAddressSpace {
-    NexusObjectHeader   object;
-    NexusSpinLock       lock;
-    NexusAddressSpaceID id;
-    NexusASFlags        flags;
+struct ARBMAddressSpace {
+    ARBMObjectHeader   object;
+    ARBMSpinLock       lock;
+    ARBMAddressSpaceID id;
+    ARBMASFlags        flags;
 
     /* architecture-private translation root */
     void               *arch_state;
 
     /* CPUs currently executing this address space */
-    NexusCpuMask        active_cpus;
+    ARBMCpuMask        active_cpus;
 
     /* invalidation generation */
     uint64_t            tlb_generation;
@@ -78,13 +78,13 @@ Those belong in the x86-64 backend.
 
 ## 5. Address-space classes
 
-### Nexus kernel address space
+### ARBM kernel address space
 
 Contains:
 
-- Nexus executable/data mappings;
-- Nexus stacks;
-- Nexus page-table management data;
+- ARBM executable/data mappings;
+- ARBM stacks;
+- ARBM page-table management data;
 - interrupt/trap structures;
 - physical-memory-management metadata;
 - explicitly required kernel device mappings.
@@ -102,7 +102,7 @@ Contains:
 - controlled shared libraries/runtime pages;
 - explicit device/service mappings where granted.
 
-It does not implicitly inherit arbitrary Nexus mappings as user-accessible memory.
+It does not implicitly inherit arbitrary ARBM mappings as user-accessible memory.
 
 ### AROS compatibility address space
 
@@ -124,7 +124,7 @@ Therefore AS0/AS1 preserve the existing ABI-visible virtual layout of the normal
 
 A later protected process or selective Legacy Cell may preserve compatible virtual addresses where necessary.
 
-That does **not** imply that Nexus must grant the same protection or authority to every address space.
+That does **not** imply that ARBM must grant the same protection or authority to every address space.
 
 The first target is:
 
@@ -134,20 +134,20 @@ same virtual address
 same physical mapping or same protection authority
 ```
 
-Nexus-only pages should be:
+ARBM-only pages should be:
 
 - absent from the Cell; or
 - mapped supervisor-only only where an unavoidable transition mechanism requires it.
 
-A future high-half or otherwise redesigned Nexus virtual layout is possible, but is not a prerequisite for proving the architecture.
+A future high-half or otherwise redesigned ARBM virtual layout is possible, but is not a prerequisite for proving the architecture.
 
 ## 7. Page-table memory ownership
 
-Page tables that enforce a protected Nexus boundary must not remain controllable by the ordinary AROS Compatibility Trust Domain allocator.
+Page tables that enforce a protected ARBM boundary must not remain controllable by the ordinary AROS Compatibility Trust Domain allocator.
 
 Long-term rule:
 
-> Nexus page-table pages come from Nexus-owned physical memory.
+> ARBM page-table pages come from ARBM-owned physical memory.
 
 The early prototype may wrap current allocation code while bootstrapping the split, but this dependency must be removed before L1 isolation is claimed.
 
@@ -155,7 +155,7 @@ Otherwise corruption in the compatibility allocator could corrupt the very struc
 
 ## 8. Mapping API
 
-The internal Nexus operation should be target-explicit.
+The internal ARBM operation should be target-explicit.
 
 Conceptually:
 
@@ -166,8 +166,8 @@ nx_map(
     MemoryObjectHandle memory,
     uint64_t offset,
     size_t length,
-    NexusMapRights rights,
-    NexusCacheMode cache_mode
+    ARBMMapRights rights,
+    ARBMCacheMode cache_mode
 );
 ```
 
@@ -184,7 +184,7 @@ No "current global MMU" is implied.
 
 An AddressSpace does not own physical pages merely because they are mapped into it.
 
-Physical/shared memory is represented independently by `NexusMemoryObject`.
+Physical/shared memory is represented independently by `ARBMMemoryObject`.
 
 This enables:
 
@@ -207,7 +207,7 @@ MemoryObject M
 
 ## 10. W^X and NX on x86-64
 
-Nexus treats executable permission as real hardware state, not documentation.
+ARBM treats executable permission as real hardware state, not documentation.
 
 ### Required work
 
@@ -246,7 +246,7 @@ The current broad bootstrap identity map is treated as temporary bootstrap autho
 
 It is not the protected runtime policy.
 
-Before an untrusted protected domain starts, Nexus must establish a runtime root with known permissions.
+Before an untrusted protected domain starts, ARBM must establish a runtime root with known permissions.
 
 The intended sequence is:
 
@@ -257,16 +257,16 @@ temporary bootstrap mappings
     |
 long mode
     |
-Nexus early init
+ARBM early init
     |
-construct/activate Nexus runtime AddressSpace
+construct/activate ARBM runtime AddressSpace
     |
 only then start protected domains
 ```
 
 ## 12. CR3 activation
 
-Only the x86-64 Nexus backend performs ordinary runtime CR3 activation.
+Only the x86-64 ARBM backend performs ordinary runtime CR3 activation.
 
 Conceptual operation:
 
@@ -285,7 +285,7 @@ Responsibilities:
 
 Legacy Exec task switches inside one Legacy Cell do **not** need a CR3 change.
 
-A Nexus switch between different protected AddressSpaces may require one.
+A ARBM switch between different protected AddressSpaces may require one.
 
 Examples include:
 
@@ -299,7 +299,7 @@ Normal Exec Task switches inside one shared compatibility AddressSpace need not 
 
 The current single-root design can often flush only the local CPU.
 
-That is insufficient when the same AddressSpace is active on multiple Nexus CPUs.
+That is insufficient when the same AddressSpace is active on multiple ARBM CPUs.
 
 ### MVP
 
@@ -307,7 +307,7 @@ For correctness first:
 
 - track which CPUs may be executing an AddressSpace;
 - on a mapping/protection change, invalidate locally;
-- send a Nexus IPI to other active CPUs;
+- send a ARBM IPI to other active CPUs;
 - wait for acknowledgement where immediate revocation is required.
 
 ### Generation model
@@ -334,29 +334,29 @@ Correctness is.
 
 ## 14. SMP rule
 
-Page-table metadata and active-CPU state require Nexus-owned locking.
+Page-table metadata and active-CPU state require ARBM-owned locking.
 
-Exec `Forbid()` or Cell-local spinlocks may not protect Nexus page tables.
+Exec `Forbid()` or Cell-local spinlocks may not protect ARBM page tables.
 
 The address-space manager therefore uses locks that remain valid independently of ABI v1 scheduler state.
 
 ## 15. Page faults
 
-A page fault is first a Nexus protection event.
+A page fault is first a ARBM protection event.
 
 The handler identifies:
 
-- current Nexus CPU;
-- current NexusThread;
-- current NexusAddressSpace;
+- current ARBM CPU;
+- current ARBMThread;
+- current ARBMAddressSpace;
 - faulting virtual address;
 - access type;
 - privilege level;
 - present/not-present state.
 
-### Nexus fault
+### ARBM fault
 
-Fault in Nexus privileged code:
+Fault in ARBM privileged code:
 
 - capture diagnostics;
 - panic unless an explicitly recoverable kernel mechanism owns the fault.
@@ -367,28 +367,28 @@ Fault:
 
 - build process diagnostic;
 - terminate or deliver a defined protected-runtime exception;
-- keep Nexus running.
+- keep ARBM running.
 
 ### Compatibility Trust Domain / Legacy Cell
 
 For the normal transitional AROS CTD, existing trap behaviour may remain until a stronger boundary is introduced; no containment claim is made beyond the proven level.
 
-For a selective Legacy Cell, the handler distinguishes compatible legacy traps from boundary violations. A fatal Cell protection violation terminates the Cell rather than Nexus.
+For a selective Legacy Cell, the handler distinguishes compatible legacy traps from boundary violations. A fatal Cell protection violation terminates the Cell rather than ARBM.
 
 ## 16. Legacy trap forwarding
 
 AROS already maps selected CPU traps into Amiga-style traps.
 
-Nexus should preserve that compatibility where it does not weaken the boundary.
+ARBM should preserve that compatibility where it does not weaken the boundary.
 
 The order becomes conceptually:
 
 ```
 CPU exception
    |
-Nexus trap classification
+ARBM trap classification
    |
-   +-- Nexus fault -> panic
+   +-- ARBM fault -> panic
    |
    +-- protected domain -> domain policy
    |
@@ -405,7 +405,7 @@ The protection kernel must decide that a fault belongs to the Cell *before* invo
 
 Device mappings are not ordinary anonymous memory.
 
-A Nexus MMIO mapping carries:
+A ARBM MMIO mapping carries:
 
 - device authority;
 - physical resource range;
@@ -432,7 +432,7 @@ Legacy compatibility APIs that return physical addresses must be audited because
 Destroying an AddressSpace requires:
 
 1. prevent new threads from entering it;
-2. stop or migrate existing NexusThreads;
+2. stop or migrate existing ARBMThreads;
 3. remove it from active CPU sets;
 4. synchronise TLB invalidation as required;
 5. revoke mappings/capabilities;
@@ -445,7 +445,7 @@ A dead AddressSpace ID/handle must not become valid again through simple pointer
 
 ### AS0 — representation only
 
-Wrap the current runtime MMU root in a `NexusAddressSpace` object.
+Wrap the current runtime MMU root in a `ARBMAddressSpace` object.
 
 Observable AROS behaviour remains identical.
 
@@ -487,13 +487,13 @@ The first AddressSpace implementation does not need:
 - file-backed mmap;
 - a Unix VM subsystem.
 
-Adding those before the protection model is proven would increase complexity without solving the core Nexus problem.
+Adding those before the protection model is proven would increase complexity without solving the core ARBM problem.
 
 ## 22. Definition of done for P1.1
 
 P1.1 is complete when:
 
-- the existing x86-64 AROS boot uses an explicit `NexusAddressSpace` representation;
+- the existing x86-64 AROS boot uses an explicit `ARBMAddressSpace` representation;
 - CR3 ownership has one documented internal path;
 - existing `KrnMapGlobal/KrnSetProtection` behaviour is preserved for the normal AROS runtime while internal target ownership becomes explicit;
 - no ABI v1 structure layout changes;
@@ -534,7 +534,7 @@ regressions**.
    cannot be assumed to mean remote permission revocation is complete.
    `arch/all-pc/kernel/kernel_ipi.c` distinguishes asynchronous hooks
    from synchronous acknowledgement waits. These helpers operate on the
-   existing shared-root design, not a Nexus-owned address-space contract.
+   existing shared-root design, not a ARBM-owned address-space contract.
 5. The 32 newly tracked upstream commits include changes to
    `arch/all-pc/kernel/smp.c`, `smp_exec.c`, `apic.h`,
    `rom/kernel/kernel_intr.c` and `rom/exec/remtask.c`.
@@ -545,11 +545,11 @@ regressions**.
 
 **Goal:** make the missing synchronous permission-revocation and
 error-reporting contracts explicit before AS1/AS2. **Non-goals:** patching
-upstream, introducing a Nexus mapping ABI, declaring a security level,
+upstream, introducing a ARBM mapping ABI, declaring a security level,
 moving the baseline, or beginning P1.1. **Preconditions:** root
 `AGENTS.md`, accepted ADR-0002, and source at the pinned upstream SHA.
 **Ownership:** U = upstream x86-64 MMU, kernel/Exec, IPI and SMP;
-N = this Nexus audit; A = none. Existing direct shared-root APIs are B0;
+N = this ARBM audit; A = none. Existing direct shared-root APIs are B0;
 no B1/B2/B3 crossing is introduced. CR3/page tables, privilege,
 IDT/APIC/interrupts, physical memory, PCI/MMIO, DMA/IOMMU and device
 ownership remain **legacy-owned**.

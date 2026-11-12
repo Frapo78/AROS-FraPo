@@ -1,4 +1,4 @@
-# Nexus Roadmap
+# ARBM Roadmap
 
 > Status: living roadmap
 >
@@ -77,19 +77,19 @@ real G2a QEMU serial-marker result. Early G2a builds are labelled
 neither a push-triggered publication nor the monthly scheduled trigger is
 enabled. The planned schedule requires a separate reviewed activation,
 a verified manual G1/G2a release and explicit approval. GitHub schedules
-run from the default branch only. Nexus integration is `nexus/main`;
-`master` remains upstream tracking. Never add Nexus code to `master`
+run from the default branch only. ARBM integration is `nexus/main`;
+`master` remains upstream tracking. Never add ARBM code to `master`
 to enable scheduling.
 
-## Phase 1 — Extract the first Nexus mechanisms under unchanged AROS
+## Phase 1 — Extract the first ARBM mechanisms under unchanged AROS
 
-Goal: create the first real Nexus substrate while preserving normal AROS behaviour.
+Goal: create the first real ARBM substrate while preserving normal AROS behaviour.
 
 Initial target: x86-64/QEMU.
 
 ### 1A — AddressSpace seam
 
-- represent the current runtime MMU root as `NexusAddressSpace`;
+- represent the current runtime MMU root as `ARBMAddressSpace`;
 - make runtime address-space ownership explicit;
 - centralize ordinary CR3 activation;
 - keep the existing AROS virtual layout unchanged;
@@ -104,7 +104,7 @@ Gate:
 
 - enable/use hardware NX where supported;
 - establish supervisor write protection where compatible;
-- make R/W/X explicit in Nexus-native mapping logic;
+- make R/W/X explicit in ARBM-native mapping logic;
 - make failure observable rather than silently ignored.
 
 Gate:
@@ -113,16 +113,16 @@ Gate:
 
 ### 1C — domain-aware faults
 
-- classify faults by current Nexus execution context;
-- distinguish Nexus-core faults from protected-context faults;
+- classify faults by current ARBM execution context;
+- distinguish ARBM-core faults from protected-context faults;
 - collect diagnostics;
-- keep Nexus alive after an expected protected-context fault.
+- keep ARBM alive after an expected protected-context fault.
 
 ### 1D — second protected context
 
 - create a second address space;
 - run minimal private code/data/stack;
-- activate it through Nexus-owned mechanisms;
+- activate it through ARBM-owned mechanisms;
 - prove L1 CPU memory isolation;
 - implement correct TLB invalidation for the tested configuration.
 
@@ -134,9 +134,9 @@ Gate:
 
 No full AROS migration is required in Phase 1.
 
-## Phase 2 — Stable Nexus contracts and generation proof
+## Phase 2 — Stable ARBM contracts and generation proof
 
-Goal: prevent Nexus from becoming a maintenance-heavy set of manual adapters.
+Goal: prevent ARBM from becoming a maintenance-heavy set of manual adapters.
 
 Work:
 
@@ -195,7 +195,7 @@ Work:
 
 Exit criteria:
 
-- same conceptual AROS service works directly or across a Nexus boundary;
+- same conceptual AROS service works directly or across an ARBM boundary;
 - caller code does not need a completely separate API;
 - measured overhead is documented;
 - service failure does not require whole-system failure.
@@ -231,7 +231,7 @@ Goal: establish L4 where hardware supports it.
 
 Requirements:
 
-- Nexus-owned IOMMU configuration;
+- ARBM-owned IOMMU configuration;
 - DMA mapping derived from authorized MemoryObjects;
 - device-specific DMA domain;
 - revocation;
@@ -243,7 +243,7 @@ QEMU success alone is not sufficient evidence for physical DMA containment.
 
 ## Phase 7 — m68k compatibility convergence
 
-Goal: make classic Amiga compatibility improve with upstream AROS rather than through a separate Nexus stack.
+Goal: make classic Amiga compatibility improve with upstream AROS rather than through a separate ARBM stack.
 
 Primary implementation remains upstream `m68kemu.library`.
 
@@ -263,7 +263,7 @@ Do not create a second transparent launcher/runtime without a strong reason.
 
 ## Phase 8 — Desktop/service resilience
 
-Goal: use Nexus mechanisms to reduce the blast radius of user-visible failures.
+Goal: use ARBM mechanisms to reduce the blast radius of user-visible failures.
 
 Possible work:
 
@@ -294,13 +294,13 @@ Optimize measured bottlenecks, not imagined ones.
 
 ## Phase 10 — ARM64 convergence
 
-Goal: express the same Nexus contracts over current AROS ARM64 work.
+Goal: express the same ARBM contracts over current AROS ARM64 work.
 
 Do not fork the runtime.
 
 Reuse upstream platform progress.
 
-Port only the Nexus-owned mechanisms and adapted seams required by the architecture.
+Port only the ARBM-owned mechanisms and adapted seams required by the architecture.
 
 ## Phase 11 — RISC-V convergence
 
@@ -308,7 +308,7 @@ Apply the same model to current AROS RISC-V/OpenSBI work.
 
 Use this phase as an architecture-neutrality test:
 
-> if a Nexus primitive only makes sense on x86-64, revisit the generic contract.
+> if an ARBM primitive only makes sense on x86-64, revisit the generic contract.
 
 ## Phase 12 — Automation and AI service foundations
 
@@ -352,7 +352,7 @@ At every major phase:
 2. classify relevant changes U/A/N;
 3. integrate or account for them;
 4. update the recorded baseline only after successful build/test;
-5. remove Nexus workarounds made obsolete by upstream.
+5. remove ARBM workarounds made obsolete by upstream.
 
 ## Community checkpoints
 
